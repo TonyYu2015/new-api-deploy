@@ -42,6 +42,43 @@ docker compose pull new-api
 docker compose up -d new-api
 ```
 
+## Stripe Top-up
+
+This deployment includes a separate one-time top-up service for usage-based billing.
+
+Flow:
+
+1. User opens `/stripe/`.
+2. User enters their New API access token and selects a one-time amount.
+3. Stripe Checkout collects payment.
+4. Stripe webhook calls `/stripe/webhook`.
+5. The service updates `top_ups` and increments `users.quota`.
+
+Required `.env` values:
+
+```bash
+STRIPE_SECRET_KEY=sk_live_or_test_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+STRIPE_SUCCESS_URL=https://your-domain.example/stripe/success
+STRIPE_CANCEL_URL=https://your-domain.example/stripe/cancel
+TOPUP_QUOTA_PER_USD=500000
+TOPUP_ALLOWED_AMOUNTS=5,10,20,50,100
+```
+
+Create the Stripe webhook endpoint:
+
+```text
+https://your-domain.example/stripe/webhook
+```
+
+Subscribe at minimum to:
+
+- `checkout.session.completed`
+- `checkout.session.expired`
+- `payment_intent.payment_failed`
+
+Leave `STRIPE_SECRET_KEY` empty to keep checkout disabled while the service and routing are still deployed.
+
 ## Data
 
 Persistent data is stored under:
