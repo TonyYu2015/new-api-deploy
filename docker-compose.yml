@@ -1,0 +1,68 @@
+services:
+  new-api:
+    image: ${NEW_API_IMAGE:-calciumion/new-api:latest}
+    container_name: new-api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${NEW_API_PORT:-3000}:3000"
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      SQL_DSN: "${MYSQL_USER:-new_api}:${MYSQL_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE:-new_api}?charset=utf8mb4&parseTime=True&loc=Local"
+      REDIS_CONN_STRING: "redis://:${REDIS_PASSWORD}@redis:6379/0"
+      SESSION_SECRET: ${SESSION_SECRET}
+      CRYPTO_SECRET: ${CRYPTO_SECRET}
+    volumes:
+      - ./data/new-api:/data
+    networks:
+      - new-api-net
+
+  mysql:
+    image: ${MYSQL_IMAGE:-mysql:8.4}
+    container_name: new-api-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-new_api}
+      MYSQL_USER: ${MYSQL_USER:-new_api}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - new-api-net
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    container_name: new-api-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - new-api-net
+
+networks:
+  new-api-net:
+    driver: bridge
