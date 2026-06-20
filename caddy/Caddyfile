@@ -4,10 +4,10 @@ http://ccaiservice.com, http://www.ccaiservice.com {
 
 ccaiservice.com, www.ccaiservice.com {
 	encode zstd gzip
-	reverse_proxy new-api:3000
+	reverse_proxy html-filter:80
 }
 
 :80 {
 	encode zstd gzip
-	reverse_proxy new-api:3000
+	reverse_proxy html-filter:80
 }

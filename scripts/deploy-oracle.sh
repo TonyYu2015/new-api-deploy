@@ -82,6 +82,7 @@ set_env_default() {
 }
 
 set_env_default CADDY_IMAGE caddy:2.8-alpine
+set_env_default NGINX_IMAGE nginx:1.27-alpine
 
 sudo docker compose pull
 sudo docker compose up -d

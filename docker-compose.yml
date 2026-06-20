@@ -24,7 +24,7 @@ services:
     container_name: new-api-nginx
     restart: unless-stopped
     depends_on:
-      - new-api
+      - html-filter
     ports:
       - "${HTTP_PORT:-3001}:80"
       - "${HTTPS_PORT:-3443}:443"
@@ -32,6 +32,17 @@ services:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    networks:
+      - new-api-net
+
+  html-filter:
+    image: ${NGINX_IMAGE:-nginx:1.27-alpine}
+    container_name: new-api-html-filter
+    restart: unless-stopped
+    depends_on:
+      - new-api
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
     networks:
       - new-api-net
 
