@@ -76,15 +76,6 @@ set_env_default() {
 }
 
 set_env_default NGINX_IMAGE nginx:1.27-alpine
-set_env_default STRIPE_SECRET_KEY ''
-set_env_default STRIPE_WEBHOOK_SECRET ''
-set_env_default STRIPE_CURRENCY usd
-set_env_default STRIPE_SUCCESS_URL 'http://144.24.26.129/stripe/success'
-set_env_default STRIPE_CANCEL_URL 'http://144.24.26.129/stripe/cancel'
-set_env_default TOPUP_QUOTA_PER_USD 500000
-set_env_default TOPUP_MIN_USD 5
-set_env_default TOPUP_MAX_USD 500
-set_env_default TOPUP_ALLOWED_AMOUNTS '5,10,20,50,100'
 
 sudo docker compose pull
 sudo docker compose up -d

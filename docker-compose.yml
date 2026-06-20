@@ -19,40 +19,12 @@ services:
     networks:
       - new-api-net
 
-  stripe-topup:
-    build:
-      context: ./stripe-topup
-    container_name: new-api-stripe-topup
-    restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
-    environment:
-      TZ: ${TZ:-Asia/Shanghai}
-      MYSQL_HOST: mysql
-      MYSQL_PORT: 3306
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-new_api}
-      MYSQL_USER: ${MYSQL_USER:-new_api}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      STRIPE_CURRENCY: ${STRIPE_CURRENCY:-usd}
-      STRIPE_SUCCESS_URL: ${STRIPE_SUCCESS_URL}
-      STRIPE_CANCEL_URL: ${STRIPE_CANCEL_URL}
-      TOPUP_QUOTA_PER_USD: ${TOPUP_QUOTA_PER_USD:-500000}
-      TOPUP_MIN_USD: ${TOPUP_MIN_USD:-5}
-      TOPUP_MAX_USD: ${TOPUP_MAX_USD:-500}
-      TOPUP_ALLOWED_AMOUNTS: ${TOPUP_ALLOWED_AMOUNTS:-5,10,20,50,100}
-    networks:
-      - new-api-net
-
   nginx:
     image: ${NGINX_IMAGE:-nginx:1.27-alpine}
     container_name: new-api-nginx
     restart: unless-stopped
     depends_on:
       - new-api
-      - stripe-topup
     ports:
       - "${NEW_API_PORT:-3001}:80"
     volumes:

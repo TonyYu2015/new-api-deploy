@@ -3,3 +3,4 @@ data/
 *.log
 __pycache__/
 *.py[cod]
+.local-run/
