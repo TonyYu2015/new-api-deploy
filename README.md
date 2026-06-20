@@ -11,10 +11,10 @@ Docker Compose deployment project for New API.
 
 ```bash
 cd /root/new-api-deploy
-cp .env.example .env
-./scripts/gen-secrets.sh
-docker compose pull
-docker compose up -d
+cp .env.development.example .env.development
+./scripts/gen-secrets.sh .env.development
+docker compose --env-file .env.development pull
+docker compose --env-file .env.development up -d
 ```
 
 Open:
@@ -26,21 +26,33 @@ https://SERVER_IP:3443
 
 If this runs on a cloud server, make sure TCP ports `80` and `443` are allowed by the firewall/security group. The Oracle deploy script publishes Caddy on both ports and serves HTTPS for `ccaiservice.com` and `www.ccaiservice.com`.
 
+## Environments
+
+Local development uses `.env.development`.
+
+Oracle production uses `.env.production` and is managed by:
+
+```bash
+./scripts/deploy-oracle.sh
+```
+
+Do not copy local `.env` values to production. The deploy script creates `.env.production` on Oracle if needed and keeps production data in the existing `./data/*` paths.
+
 ## Common Commands
 
 ```bash
 # Start
-docker compose up -d
+docker compose --env-file .env.development up -d
 
 # Stop
-docker compose down
+docker compose --env-file .env.development down
 
 # View logs
-docker compose logs -f new-api
+docker compose --env-file .env.development logs -f new-api
 
 # Upgrade image
-docker compose pull new-api
-docker compose up -d new-api
+docker compose --env-file .env.development pull new-api
+docker compose --env-file .env.development up -d new-api
 ```
 
 ## Data
@@ -55,7 +67,7 @@ Back up this directory before upgrading or moving the service.
 
 ## Environment
 
-Edit `.env` to change ports, image tags, database passwords, and secrets.
+Edit `.env.development` locally or `.env.production` on Oracle to change ports, image tags, database passwords, and secrets.
 
 Use a pinned image tag in production instead of `latest` once you have verified a working version.
 

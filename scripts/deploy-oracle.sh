@@ -56,37 +56,52 @@ fi
 
 cd "$DEPLOY_PATH"
 
-if [ ! -f .env ]; then
-  cp .env.example .env
-  ./scripts/gen-secrets.sh
+ENV_FILE=".env.production"
+
+if [ ! -f "$ENV_FILE" ]; then
+  if [ -f .env ]; then
+    cp .env "$ENV_FILE"
+  else
+    cp .env.production.example "$ENV_FILE"
+    ./scripts/gen-secrets.sh "$ENV_FILE"
+  fi
 fi
 
-if grep -q '^HTTP_PORT=' .env; then
-  sed -i 's/^HTTP_PORT=.*/HTTP_PORT=80/' .env
+if grep -q '^HTTP_PORT=' "$ENV_FILE"; then
+  sed -i 's/^HTTP_PORT=.*/HTTP_PORT=80/' "$ENV_FILE"
 else
-  echo 'HTTP_PORT=80' >> .env
+  echo 'HTTP_PORT=80' >> "$ENV_FILE"
 fi
 
-if grep -q '^HTTPS_PORT=' .env; then
-  sed -i 's/^HTTPS_PORT=.*/HTTPS_PORT=443/' .env
+if grep -q '^HTTPS_PORT=' "$ENV_FILE"; then
+  sed -i 's/^HTTPS_PORT=.*/HTTPS_PORT=443/' "$ENV_FILE"
 else
-  echo 'HTTPS_PORT=443' >> .env
+  echo 'HTTPS_PORT=443' >> "$ENV_FILE"
 fi
 
 set_env_default() {
   local key="$1"
   local value="$2"
-  if ! grep -q "^${key}=" .env; then
-    echo "${key}=${value}" >> .env
+  if ! grep -q "^${key}=" "$ENV_FILE"; then
+    echo "${key}=${value}" >> "$ENV_FILE"
   fi
 }
 
 set_env_default CADDY_IMAGE caddy:2.8-alpine
 set_env_default NGINX_IMAGE nginx:1.27-alpine
+set_env_default COMPOSE_PROJECT_NAME new-api-deploy
+set_env_default APP_CONTAINER_NAME new-api
+set_env_default CADDY_CONTAINER_NAME new-api-nginx
+set_env_default HTML_FILTER_CONTAINER_NAME new-api-html-filter
+set_env_default MYSQL_CONTAINER_NAME new-api-mysql
+set_env_default REDIS_CONTAINER_NAME new-api-redis
+set_env_default NEW_API_DATA_DIR ./data/new-api
+set_env_default MYSQL_DATA_DIR ./data/mysql
+set_env_default REDIS_DATA_DIR ./data/redis
 
-sudo docker compose pull
-sudo docker compose up -d
-sudo docker compose ps
+sudo docker compose --env-file "$ENV_FILE" pull
+sudo docker compose --env-file "$ENV_FILE" up -d
+sudo docker compose --env-file "$ENV_FILE" ps
 REMOTE
 
 echo "Oracle deployment finished."

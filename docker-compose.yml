@@ -1,7 +1,9 @@
+name: ${COMPOSE_PROJECT_NAME:-new-api-deploy}
+
 services:
   new-api:
     image: ${NEW_API_IMAGE:-calciumion/new-api:latest}
-    container_name: new-api
+    container_name: ${APP_CONTAINER_NAME:-new-api}
     restart: unless-stopped
     depends_on:
       mysql:
@@ -15,13 +17,13 @@ services:
       SESSION_SECRET: ${SESSION_SECRET}
       CRYPTO_SECRET: ${CRYPTO_SECRET}
     volumes:
-      - ./data/new-api:/data
+      - ${NEW_API_DATA_DIR:-./data/new-api}:/data
     networks:
       - new-api-net
 
   nginx:
     image: ${CADDY_IMAGE:-caddy:2.8-alpine}
-    container_name: new-api-nginx
+    container_name: ${CADDY_CONTAINER_NAME:-new-api-nginx}
     restart: unless-stopped
     depends_on:
       - html-filter
@@ -37,7 +39,7 @@ services:
 
   html-filter:
     image: ${NGINX_IMAGE:-nginx:1.27-alpine}
-    container_name: new-api-html-filter
+    container_name: ${HTML_FILTER_CONTAINER_NAME:-new-api-html-filter}
     restart: unless-stopped
     depends_on:
       - new-api
@@ -48,7 +50,7 @@ services:
 
   mysql:
     image: ${MYSQL_IMAGE:-mysql:8.4}
-    container_name: new-api-mysql
+    container_name: ${MYSQL_CONTAINER_NAME:-new-api-mysql}
     restart: unless-stopped
     command:
       - --character-set-server=utf8mb4
@@ -62,7 +64,7 @@ services:
     ports:
       - "127.0.0.1:${MYSQL_PORT:-3307}:3306"
     volumes:
-      - ./data/mysql:/var/lib/mysql
+      - ${MYSQL_DATA_DIR:-./data/mysql}:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
       interval: 10s
@@ -73,13 +75,13 @@ services:
 
   redis:
     image: ${REDIS_IMAGE:-redis:7-alpine}
-    container_name: new-api-redis
+    container_name: ${REDIS_CONTAINER_NAME:-new-api-redis}
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
     environment:
       TZ: ${TZ:-Asia/Shanghai}
     volumes:
-      - ./data/redis:/data
+      - ${REDIS_DATA_DIR:-./data/redis}:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
