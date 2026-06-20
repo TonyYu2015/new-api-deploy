@@ -20,15 +20,18 @@ services:
       - new-api-net
 
   nginx:
-    image: ${NGINX_IMAGE:-nginx:1.27-alpine}
+    image: ${CADDY_IMAGE:-caddy:2.8-alpine}
     container_name: new-api-nginx
     restart: unless-stopped
     depends_on:
       - new-api
     ports:
-      - "${NEW_API_PORT:-3001}:80"
+      - "${HTTP_PORT:-3001}:80"
+      - "${HTTPS_PORT:-3443}:443"
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
     networks:
       - new-api-net
 
@@ -77,3 +80,7 @@ services:
 networks:
   new-api-net:
     driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

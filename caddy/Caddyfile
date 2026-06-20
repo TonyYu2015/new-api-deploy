@@ -1,0 +1,13 @@
+http://ccaiservice.com, http://www.ccaiservice.com {
+	redir https://{host}{uri} permanent
+}
+
+ccaiservice.com, www.ccaiservice.com {
+	encode zstd gzip
+	reverse_proxy new-api:3000
+}
+
+:80 {
+	encode zstd gzip
+	reverse_proxy new-api:3000
+}

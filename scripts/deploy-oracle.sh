@@ -61,10 +61,16 @@ if [ ! -f .env ]; then
   ./scripts/gen-secrets.sh
 fi
 
-if grep -q '^NEW_API_PORT=' .env; then
-  sed -i 's/^NEW_API_PORT=.*/NEW_API_PORT=80/' .env
+if grep -q '^HTTP_PORT=' .env; then
+  sed -i 's/^HTTP_PORT=.*/HTTP_PORT=80/' .env
 else
-  echo 'NEW_API_PORT=80' >> .env
+  echo 'HTTP_PORT=80' >> .env
+fi
+
+if grep -q '^HTTPS_PORT=' .env; then
+  sed -i 's/^HTTPS_PORT=.*/HTTPS_PORT=443/' .env
+else
+  echo 'HTTPS_PORT=443' >> .env
 fi
 
 set_env_default() {
@@ -75,7 +81,7 @@ set_env_default() {
   fi
 }
 
-set_env_default NGINX_IMAGE nginx:1.27-alpine
+set_env_default CADDY_IMAGE caddy:2.8-alpine
 
 sudo docker compose pull
 sudo docker compose up -d

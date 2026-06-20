@@ -21,9 +21,10 @@ Open:
 
 ```text
 http://SERVER_IP:3001
+https://SERVER_IP:3443
 ```
 
-If this runs on a cloud server, make sure TCP port `3001` is allowed by the firewall/security group. For production, put Nginx/Caddy in front of it and serve HTTPS on `443`.
+If this runs on a cloud server, make sure TCP ports `80` and `443` are allowed by the firewall/security group. The Oracle deploy script publishes Caddy on both ports and serves HTTPS for `ccaiservice.com` and `www.ccaiservice.com`.
 
 ## Common Commands
 
