@@ -6,3 +6,8 @@ data/
 __pycache__/
 *.py[cod]
 .local-run/
+ui-tests/node_modules/
+ui-tests/test-results/
+ui-tests/playwright-report/
+ui-tests/.auth/
+ui-tests/.env.e2e

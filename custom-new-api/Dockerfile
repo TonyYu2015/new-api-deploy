@@ -1,0 +1,71 @@
+ARG UPSTREAM_COMMIT=69b0f0b56f528efa292a2893feb0c55c37399f4b
+ARG UPSTREAM_VERSION=v1.0.0-rc.15
+
+FROM alpine/git:2.49.1@sha256:c0280cf9572316299b08544065d3bf35db65043d5e3963982ec50647d2746e26 AS source
+ARG UPSTREAM_COMMIT
+RUN git init /src \
+    && cd /src \
+    && git remote add origin https://github.com/QuantumNous/new-api.git \
+    && git fetch --depth 1 origin "${UPSTREAM_COMMIT}" \
+    && git checkout --detach FETCH_HEAD \
+    && test "$(git rev-parse HEAD)" = "${UPSTREAM_COMMIT}"
+COPY custom-new-api/ccai.patch /tmp/ccai.patch
+COPY custom-new-api/waffo-pancake-min-topup.patch /tmp/waffo-pancake-min-topup.patch
+COPY custom-new-api/pancake-balance-baseline.patch /tmp/pancake-balance-baseline.patch
+RUN cd /src \
+    && git apply --check /tmp/ccai.patch \
+    && git apply /tmp/ccai.patch \
+    && git apply --check /tmp/waffo-pancake-min-topup.patch \
+    && git apply /tmp/waffo-pancake-min-topup.patch \
+    && git apply --check /tmp/pancake-balance-baseline.patch \
+    && git apply /tmp/pancake-balance-baseline.patch
+
+FROM oven/bun:1@sha256:0733e50325078969732ebe3b15ce4c4be5082f18c4ac1a0f0ca4839c2e4e42a7 AS builder
+ARG UPSTREAM_VERSION
+WORKDIR /build/web
+COPY --from=source /src/web/package.json /src/web/bun.lock ./
+COPY --from=source /src/web/default/package.json ./default/package.json
+COPY --from=source /src/web/classic/package.json ./classic/package.json
+RUN bun install --frozen-lockfile
+COPY --from=source /src/web/default ./default
+RUN cd default \
+    && DISABLE_ESLINT_PLUGIN='true' \
+       VITE_REACT_APP_VERSION="${UPSTREAM_VERSION}-ccai.8" \
+       bun run build
+
+FROM oven/bun:1@sha256:0733e50325078969732ebe3b15ce4c4be5082f18c4ac1a0f0ca4839c2e4e42a7 AS builder-classic
+ARG UPSTREAM_VERSION
+WORKDIR /build/web
+COPY --from=source /src/web/package.json /src/web/bun.lock ./
+COPY --from=source /src/web/default/package.json ./default/package.json
+COPY --from=source /src/web/classic/package.json ./classic/package.json
+RUN bun install --filter ./classic --frozen-lockfile
+COPY --from=source /src/web/classic ./classic
+RUN cd classic && VITE_REACT_APP_VERSION="${UPSTREAM_VERSION}-ccai.8" bun run build
+
+FROM golang:1.26.1-alpine@sha256:2389ebfa5b7f43eeafbd6be0c3700cc46690ef842ad962f6c5bd6be49ed82039 AS builder2
+ENV GO111MODULE=on CGO_ENABLED=0 GOEXPERIMENT=greenteagc
+ARG TARGETOS
+ARG TARGETARCH
+ARG UPSTREAM_VERSION
+ENV GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64}
+WORKDIR /build
+COPY --from=source /src/go.mod /src/go.sum ./
+RUN go mod download
+COPY --from=source /src .
+COPY --from=builder /build/web/default/dist ./web/default/dist
+COPY --from=builder-classic /build/web/classic/dist ./web/classic/dist
+RUN go build \
+    -ldflags "-s -w -X 'github.com/QuantumNous/new-api/common.Version=${UPSTREAM_VERSION}-ccai.8'" \
+    -o new-api
+
+FROM debian:bookworm-slim@sha256:f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates tzdata libasan8 wget \
+    && rm -rf /var/lib/apt/lists/* \
+    && update-ca-certificates
+COPY --from=builder2 /build/new-api /
+COPY --from=source /src/LICENSE /src/NOTICE /src/THIRD-PARTY-LICENSES.md /licenses/
+EXPOSE 3000
+WORKDIR /data
+ENTRYPOINT ["/new-api"]

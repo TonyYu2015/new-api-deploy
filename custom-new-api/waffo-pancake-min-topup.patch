@@ -1,0 +1,126 @@
+diff --git a/web/default/src/features/system-settings/billing/index.tsx b/web/default/src/features/system-settings/billing/index.tsx
+index daad506..6d49537 100644
+--- a/web/default/src/features/system-settings/billing/index.tsx
++++ b/web/default/src/features/system-settings/billing/index.tsx
+@@ -100,6 +100,7 @@ const defaultBillingSettings: BillingSettings = {
+   WaffoPancakeMerchantID: '',
+   WaffoPancakePrivateKey: '',
+   WaffoPancakeReturnURL: '',
++  WaffoPancakeMinTopUp: 1,
+   WaffoPancakeStoreID: '',
+   WaffoPancakeProductID: '',
+   'checkin_setting.enabled': false,
+diff --git a/web/default/src/features/system-settings/billing/section-registry.tsx b/web/default/src/features/system-settings/billing/section-registry.tsx
+index 1a1dc8a..a7bf21b 100644
+--- a/web/default/src/features/system-settings/billing/section-registry.tsx
++++ b/web/default/src/features/system-settings/billing/section-registry.tsx
+@@ -173,6 +173,7 @@ const BILLING_SECTIONS = [
+           WaffoPancakeMerchantID: settings.WaffoPancakeMerchantID ?? '',
+           WaffoPancakePrivateKey: settings.WaffoPancakePrivateKey ?? '',
+           WaffoPancakeReturnURL: settings.WaffoPancakeReturnURL ?? '',
++          WaffoPancakeMinTopUp: settings.WaffoPancakeMinTopUp ?? 1,
+         }}
+         waffoPancakeProvisionedStoreID={settings.WaffoPancakeStoreID ?? ''}
+         waffoPancakeProvisionedProductID={settings.WaffoPancakeProductID ?? ''}
+diff --git a/web/default/src/features/system-settings/integrations/payment-settings-section.tsx b/web/default/src/features/system-settings/integrations/payment-settings-section.tsx
+index 915cf64..91eb352 100644
+--- a/web/default/src/features/system-settings/integrations/payment-settings-section.tsx
++++ b/web/default/src/features/system-settings/integrations/payment-settings-section.tsx
+@@ -174,6 +174,7 @@ const paymentSchema = z.object({
+   WaffoPancakeMerchantID: z.string(),
+   WaffoPancakePrivateKey: z.string(),
+   WaffoPancakeReturnURL: z.string(),
++  WaffoPancakeMinTopUp: z.coerce.number().int().min(1),
+ })
+
+ type PaymentFormValues = z.infer<typeof paymentSchema>
+@@ -455,6 +456,7 @@ export function PaymentSettingsSection({
+       WaffoPancakeReturnURL: removeTrailingSlash(
+         values.WaffoPancakeReturnURL.trim()
+       ),
++      WaffoPancakeMinTopUp: values.WaffoPancakeMinTopUp,
+     }
+
+     const initial = {
+@@ -502,6 +504,7 @@ export function PaymentSettingsSection({
+       WaffoPancakeReturnURL: removeTrailingSlash(
+         initialRef.current.WaffoPancakeReturnURL.trim()
+       ),
++      WaffoPancakeMinTopUp: initialRef.current.WaffoPancakeMinTopUp,
+     }
+
+     const updates: Array<{ key: string; value: string | number | boolean }> = []
+@@ -699,6 +702,15 @@ export function PaymentSettingsSection({
+       updates.push({ key: 'WaffoPayMethods', value: sanitized.WaffoPayMethods })
+     }
+
++    if (
++      sanitized.WaffoPancakeMinTopUp !== initial.WaffoPancakeMinTopUp
++    ) {
++      updates.push({
++        key: 'WaffoPancakeMinTopUp',
++        value: sanitized.WaffoPancakeMinTopUp,
++      })
++    }
++
+     const hasWaffoPancakeChanges =
+       sanitized.WaffoPancakeMerchantID !== initial.WaffoPancakeMerchantID ||
+       sanitized.WaffoPancakePrivateKey.length > 0 ||
+@@ -792,6 +804,7 @@ export function PaymentSettingsSection({
+     WaffoPancakeMerchantID: currentFormValues.WaffoPancakeMerchantID,
+     WaffoPancakePrivateKey: currentFormValues.WaffoPancakePrivateKey,
+     WaffoPancakeReturnURL: currentFormValues.WaffoPancakeReturnURL,
++    WaffoPancakeMinTopUp: currentFormValues.WaffoPancakeMinTopUp,
+   }
+
+   return (
+diff --git a/web/default/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx b/web/default/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx
+index 82ad963..72fa3e7 100644
+--- a/web/default/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx
++++ b/web/default/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx
+@@ -44,6 +44,7 @@ export type WaffoPancakeSettingsValues = {
+   WaffoPancakeMerchantID: string
+   WaffoPancakePrivateKey: string
+   WaffoPancakeReturnURL: string
++  WaffoPancakeMinTopUp: number
+ }
+
+ export interface WaffoPancakeBinding {
+@@ -429,6 +430,25 @@ export function WaffoPancakeSettingsSection({
+           />
+         </div>
+
++        <div className='grid gap-1.5'>
++          <Label>{t('Minimum top-up (USD)')}</Label>
++          <Input
++            type='number'
++            min={1}
++            step={1}
++            value={values.WaffoPancakeMinTopUp}
++            onChange={(event) =>
++              onValueChange(
++                'WaffoPancakeMinTopUp',
++                Number.parseInt(event.target.value, 10) || 1
++              )
++            }
++          />
++          <p className='text-muted-foreground text-xs'>
++            {t('Smallest USD amount users can recharge with Waffo Pancake')}
++          </p>
++        </div>
++
+         <div className='grid gap-1.5'>
+           <Label>{t('API Private Key')}</Label>
+           <Textarea
+diff --git a/web/default/src/features/system-settings/types.ts b/web/default/src/features/system-settings/types.ts
+index 5f6e0c6..7ac49a2 100644
+--- a/web/default/src/features/system-settings/types.ts
++++ b/web/default/src/features/system-settings/types.ts
+@@ -320,6 +320,7 @@ export type BillingSettings = {
+   WaffoPancakeMerchantID: string
+   WaffoPancakePrivateKey: string
+   WaffoPancakeReturnURL: string
++  WaffoPancakeMinTopUp: number
+   // Bound by the operator through the catalog flow in the admin Pancake
+   // section (saved via /api/option/waffo-pancake/save).
+   WaffoPancakeStoreID: string

@@ -1,0 +1,15 @@
+{
+  "name": "ccai-ui-tests",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:desktop": "playwright test --project=desktop",
+    "test:mobile": "playwright test --project=mobile",
+    "test:visual": "E2E_VISUAL=1 playwright test",
+    "test:visual:update": "E2E_VISUAL=1 playwright test --update-snapshots",
+    "install:browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1"
+  }
+}

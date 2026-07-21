@@ -1,0 +1,1592 @@
+diff --git a/controller/subscription_payment_waffo_pancake.go b/controller/subscription_payment_waffo_pancake.go
+index 0915ddc6..fec0523c 100644
+--- a/controller/subscription_payment_waffo_pancake.go
++++ b/controller/subscription_payment_waffo_pancake.go
+@@ -104,6 +104,7 @@ func SubscriptionRequestWaffoPancakePay(c *gin.Context) {
+ 			TaxCategory: "saas",
+ 		},
+ 		BuyerEmail:              getWaffoPancakeBuyerEmail(user),
++		ReturnURL:               setting.WaffoPancakeReturnURL,
+ 		ExpiresInSeconds:        &expiresInSeconds,
+ 		OrderMerchantExternalID: tradeNo,
+ 	})
+diff --git a/controller/topup_waffo_pancake.go b/controller/topup_waffo_pancake.go
+index beb73ebe..13fa014d 100644
+--- a/controller/topup_waffo_pancake.go
++++ b/controller/topup_waffo_pancake.go
+@@ -397,6 +397,7 @@ func RequestWaffoPancakePay(c *gin.Context) {
+ 			TaxCategory: "saas",
+ 		},
+ 		BuyerEmail:              getWaffoPancakeBuyerEmail(user),
++		ReturnURL:               setting.WaffoPancakeReturnURL,
+ 		ExpiresInSeconds:        &expiresInSeconds,
+ 		OrderMerchantExternalID: tradeNo,
+ 	})
+diff --git a/service/waffo_pancake.go b/service/waffo_pancake.go
+index 5387eab8..30105b91 100644
+--- a/service/waffo_pancake.go
++++ b/service/waffo_pancake.go
+@@ -24,6 +24,7 @@ type WaffoPancakeCreateSessionParams struct {
+ 	BuyerIdentity           string
+ 	PriceSnapshot           *WaffoPancakePriceSnapshot
+ 	BuyerEmail              string
++	ReturnURL               string
+ 	ExpiresInSeconds        *int
+ 	OrderMerchantExternalID string
+ }
+@@ -116,6 +117,7 @@ func CreateWaffoPancakeCheckoutSession(ctx context.Context, params *WaffoPancake
+ 			ProductID:               params.ProductID,
+ 			Currency:                "USD",
+ 			BuyerEmail:              optionalString(params.BuyerEmail),
++			SuccessURL:              optionalString(strings.TrimSpace(params.ReturnURL)),
+ 			ExpiresInSeconds:        params.ExpiresInSeconds,
+ 			OrderMerchantExternalID: optionalString(params.OrderMerchantExternalID),
+ 		},
+diff --git a/web/default/src/features/profile/components/profile-header.tsx b/web/default/src/features/profile/components/profile-header.tsx
+index 7127f351..01bc0cb2 100644
+--- a/web/default/src/features/profile/components/profile-header.tsx
++++ b/web/default/src/features/profile/components/profile-header.tsx
+@@ -16,10 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+ For commercial licensing, please contact support@quantumnous.com
+ */
+-import { Activity, BarChart3, WalletCards } from 'lucide-react'
+ import { useTranslation } from 'react-i18next'
+ import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
+-import { formatCompactNumber, formatQuota } from '@/lib/format'
+ import { getRoleLabel } from '@/lib/roles'
+ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+ import { Card, CardContent } from '@/components/ui/card'
+@@ -59,17 +57,6 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
+             </div>
+           </div>
+         </CardContent>
+-        <div className='border-t'>
+-          <div className='divide-border/60 grid grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0'>
+-            {Array.from({ length: 3 }).map((_, i) => (
+-              <div key={i} className='px-4 py-3.5 sm:px-5 sm:py-4'>
+-                <Skeleton className='h-3.5 w-20' />
+-                <Skeleton className='mt-2 h-7 w-28' />
+-                <Skeleton className='mt-1.5 h-3.5 w-24' />
+-              </div>
+-            ))}
+-          </div>
+-        </div>
+       </Card>
+     )
+   }
+@@ -81,27 +68,6 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
+   const avatarFallback = getUserAvatarFallback(avatarName)
+   const avatarFallbackStyle = getUserAvatarStyle(avatarName)
+   const roleLabel = getRoleLabel(profile.role)
+-  const stats = [
+-    {
+-      label: t('Current Balance'),
+-      value: formatQuota(profile.quota),
+-      description: t('Remaining quota'),
+-      icon: WalletCards,
+-    },
+-    {
+-      label: t('Total Usage'),
+-      value: formatQuota(profile.used_quota),
+-      description: t('Total consumed quota'),
+-      icon: BarChart3,
+-    },
+-    {
+-      label: t('API Requests'),
+-      value: formatCompactNumber(profile.request_count),
+-      description: t('Total requests made'),
+-      icon: Activity,
+-    },
+-  ]
+-
+   return (
+     <Card data-card-hover='false' className='gap-0 overflow-hidden py-0'>
+       <CardContent className='p-3 sm:p-5'>
+@@ -150,27 +116,6 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
+           </div>
+         </div>
+       </CardContent>
+-      <div className='border-t'>
+-        <div className='divide-border/60 grid grid-cols-3 divide-x'>
+-          {stats.map((item) => (
+-            <div key={item.label} className='min-w-0 px-3 py-3 sm:px-5 sm:py-4'>
+-              <div className='flex items-center gap-2'>
+-                <item.icon className='text-muted-foreground/60 size-3.5 shrink-0' />
+-                <div className='text-muted-foreground truncate text-xs font-medium tracking-wider uppercase'>
+-                  {item.label}
+-                </div>
+-              </div>
+-
+-              <div className='text-foreground mt-1.5 truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl'>
+-                {item.value}
+-              </div>
+-              <div className='text-muted-foreground/60 mt-1 hidden text-xs md:block'>
+-                {item.description}
+-              </div>
+-            </div>
+-          ))}
+-        </div>
+-      </div>
+     </Card>
+   )
+ }
+diff --git a/web/default/src/features/profile/components/profile-security-card.tsx b/web/default/src/features/profile/components/profile-security-card.tsx
+index 137cfaf4..670d5876 100644
+--- a/web/default/src/features/profile/components/profile-security-card.tsx
++++ b/web/default/src/features/profile/components/profile-security-card.tsx
+@@ -16,14 +16,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+ For commercial licensing, please contact support@quantumnous.com
+ */
+-import { Shield, Key, Trash2 } from 'lucide-react'
++import { Shield, Trash2 } from 'lucide-react'
+ import { useTranslation } from 'react-i18next'
+ import { useDialogs } from '@/hooks/use-dialog'
+ import { Card, CardContent, CardHeader } from '@/components/ui/card'
+ import { Skeleton } from '@/components/ui/skeleton'
+ import { TitledCard } from '@/components/ui/titled-card'
+ import type { UserProfile } from '../types'
+-import { AccessTokenDialog } from './dialogs/access-token-dialog'
+ import { ChangePasswordDialog } from './dialogs/change-password-dialog'
+ import { DeleteAccountDialog } from './dialogs/delete-account-dialog'
+
+@@ -36,7 +35,7 @@ interface ProfileSecurityCardProps {
+   loading: boolean
+ }
+
+-type DialogKey = 'password' | 'token' | 'delete'
++type DialogKey = 'password' | 'delete'
+
+ export function ProfileSecurityCard({
+   profile,
+@@ -71,13 +70,6 @@ export function ProfileSecurityCard({
+       action: () => dialogs.open('password'),
+       variant: 'default' as const,
+     },
+-    {
+-      icon: Key,
+-      title: t('Access Token'),
+-      description: t('Generate and manage your API access token'),
+-      action: () => dialogs.open('token'),
+-      variant: 'default' as const,
+-    },
+     {
+       icon: Trash2,
+       title: t('Delete Account'),
+@@ -95,7 +87,7 @@ export function ProfileSecurityCard({
+         icon={<Shield className='h-4 w-4' />}
+         disableHoverEffect
+       >
+-        <div className='grid grid-cols-1 gap-2.5 sm:gap-3 md:grid-cols-3'>
++        <div className='grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3'>
+           {securityActions.map((item) => (
+             <button
+               key={item.title}
+@@ -134,13 +126,6 @@ export function ProfileSecurityCard({
+         username={profile.username}
+       />
+
+-      <AccessTokenDialog
+-        open={dialogs.isOpen('token')}
+-        onOpenChange={(open) =>
+-          open ? dialogs.open('token') : dialogs.close('token')
+-        }
+-      />
+-
+       <DeleteAccountDialog
+         open={dialogs.isOpen('delete')}
+         onOpenChange={(open) =>
+diff --git a/web/default/src/features/profile/components/tabs/notification-tab.tsx b/web/default/src/features/profile/components/tabs/notification-tab.tsx
+index 8e2c9a0d..702f036b 100644
+--- a/web/default/src/features/profile/components/tabs/notification-tab.tsx
++++ b/web/default/src/features/profile/components/tabs/notification-tab.tsx
+@@ -17,45 +17,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
+ For commercial licensing, please contact support@quantumnous.com
+ */
+ import { useState, useEffect, useCallback } from 'react'
+-import { Bell, Loader2, Mail, Server, Webhook } from 'lucide-react'
++import { Loader2 } from 'lucide-react'
+ import { useTranslation } from 'react-i18next'
+ import { toast } from 'sonner'
+-import { ROLE } from '@/lib/roles'
+ import { Button } from '@/components/ui/button'
+ import { Input } from '@/components/ui/input'
+ import { Label } from '@/components/ui/label'
+-import { Switch } from '@/components/ui/switch'
+-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+-import { PasswordInput } from '@/components/password-input'
+ import { updateUserSettings } from '../../api'
+-import {
+-  DEFAULT_QUOTA_WARNING_THRESHOLD,
+-  NOTIFICATION_METHODS,
+-} from '../../constants'
++import { DEFAULT_QUOTA_WARNING_THRESHOLD } from '../../constants'
+ import { parseUserSettings } from '../../lib'
+-import type { UserProfile, UserSettings, NotifyType } from '../../types'
+-
+-const NOTIFICATION_ICONS: Record<NotifyType, typeof Mail> = {
+-  email: Mail,
+-  webhook: Webhook,
+-  bark: Bell,
+-  gotify: Server,
+-}
+-
+-const NOTIFICATION_VALUES = new Set<NotifyType>(
+-  NOTIFICATION_METHODS.map((method) => method.value)
+-)
+-
+-function normalizeNotifyType(value: unknown): NotifyType {
+-  return typeof value === 'string' &&
+-    NOTIFICATION_VALUES.has(value as NotifyType)
+-    ? (value as NotifyType)
+-    : 'email'
+-}
+-
+-// ============================================================================
+-// Settings Tab Component
+-// ============================================================================
++import type { UserProfile, UserSettings } from '../../types'
+
+ interface NotificationTabProps {
+   profile: UserProfile | null
+@@ -64,7 +35,6 @@ interface NotificationTabProps {
+
+ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
+   const { t } = useTranslation()
+-  const isAdmin = (profile?.role ?? 0) >= ROLE.ADMIN
+   const [loading, setLoading] = useState(false)
+   const [settings, setSettings] = useState<UserSettings>({
+     notify_type: 'email',
+@@ -81,35 +51,34 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
+     upstream_model_update_notify_enabled: false,
+   })
+
+-  // Update form field helper
+   const updateField = useCallback(
+     <K extends keyof UserSettings>(field: K, value: UserSettings[K]) => {
+-      setSettings((prev) => ({ ...prev, [field]: value }))
++      setSettings((previous) => ({ ...previous, [field]: value }))
+     },
+     []
+   )
+
+   useEffect(() => {
+-    if (profile?.setting) {
+-      const parsed = parseUserSettings(profile.setting)
+-      setSettings({
+-        notify_type: normalizeNotifyType(parsed.notify_type),
+-        quota_warning_threshold:
+-          parsed.quota_warning_threshold ?? DEFAULT_QUOTA_WARNING_THRESHOLD,
+-        notification_email: parsed.notification_email ?? '',
+-        webhook_url: parsed.webhook_url ?? '',
+-        webhook_secret: parsed.webhook_secret ?? '',
+-        bark_url: parsed.bark_url ?? '',
+-        gotify_url: parsed.gotify_url ?? '',
+-        gotify_token: parsed.gotify_token ?? '',
+-        gotify_priority: parsed.gotify_priority ?? 5,
+-        accept_unset_model_ratio_model:
+-          parsed.accept_unset_model_ratio_model || false,
+-        record_ip_log: parsed.record_ip_log || false,
+-        upstream_model_update_notify_enabled:
+-          parsed.upstream_model_update_notify_enabled || false,
+-      })
+-    }
++    if (!profile?.setting) return
++
++    const parsed = parseUserSettings(profile.setting)
++    setSettings({
++      notify_type: 'email',
++      quota_warning_threshold:
++        parsed.quota_warning_threshold ?? DEFAULT_QUOTA_WARNING_THRESHOLD,
++      notification_email: parsed.notification_email ?? '',
++      webhook_url: parsed.webhook_url ?? '',
++      webhook_secret: parsed.webhook_secret ?? '',
++      bark_url: parsed.bark_url ?? '',
++      gotify_url: parsed.gotify_url ?? '',
++      gotify_token: parsed.gotify_token ?? '',
++      gotify_priority: parsed.gotify_priority ?? 5,
++      accept_unset_model_ratio_model:
++        parsed.accept_unset_model_ratio_model || false,
++      record_ip_log: parsed.record_ip_log || false,
++      upstream_model_update_notify_enabled:
++        parsed.upstream_model_update_notify_enabled || false,
++    })
+   }, [profile])
+
+   const handleSave = async () => {
+@@ -130,45 +99,8 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
+     }
+   }
+
+-  const notifyType = normalizeNotifyType(settings.notify_type)
+-
+   return (
+     <div className='space-y-4 sm:space-y-6'>
+-      {/* Notification Type */}
+-      <div className='space-y-2.5'>
+-        <Label>{t('Notification Method')}</Label>
+-        <ToggleGroup
+-          value={[notifyType]}
+-          onValueChange={(value) => {
+-            const nextValue = value.find((item) => item !== notifyType)
+-            if (nextValue)
+-              updateField('notify_type', normalizeNotifyType(nextValue))
+-          }}
+-          aria-label={t('Notification Method')}
+-          variant='outline'
+-          size='lg'
+-          spacing={2}
+-          className='grid w-full grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3'
+-        >
+-          {NOTIFICATION_METHODS.map((method) => {
+-            const Icon = NOTIFICATION_ICONS[method.value]
+-            return (
+-              <ToggleGroupItem
+-                key={method.value}
+-                value={method.value}
+-                className='h-auto min-h-14 w-full flex-col gap-1.5 px-3 py-3 sm:min-h-16'
+-              >
+-                <Icon className='h-4 w-4 sm:h-5 sm:w-5' />
+-                <span className='max-w-full truncate text-xs font-medium sm:text-sm'>
+-                  {t(method.label)}
+-                </span>
+-              </ToggleGroupItem>
+-            )
+-          })}
+-        </ToggleGroup>
+-      </div>
+-
+-      {/* Warning Threshold */}
+       <div className='space-y-1.5'>
+         <Label htmlFor='threshold'>{t('Quota Warning Threshold')}</Label>
+         <Input
+@@ -176,8 +108,11 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
+           type='number'
+           className='h-9'
+           value={settings.quota_warning_threshold}
+-          onChange={(e) =>
+-            updateField('quota_warning_threshold', Number(e.target.value))
++          onChange={(event) =>
++            updateField(
++              'quota_warning_threshold',
++              Number(event.target.value)
++            )
+           }
+           placeholder={t('Enter threshold')}
+         />
+@@ -186,212 +121,20 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
+         </p>
+       </div>
+
+-      {/* Email Settings */}
+-      {notifyType === 'email' && (
+-        <div className='space-y-1.5'>
+-          <Label htmlFor='notifyEmail'>{t('Notification Email')}</Label>
+-          <Input
+-            id='notifyEmail'
+-            type='email'
+-            className='h-9'
+-            value={settings.notification_email}
+-            onChange={(e) => updateField('notification_email', e.target.value)}
+-            placeholder={t('Leave empty to use account email')}
+-          />
+-        </div>
+-      )}
+-
+-      {/* Webhook Settings */}
+-      {notifyType === 'webhook' && (
+-        <>
+-          <div className='space-y-1.5'>
+-            <Label htmlFor='webhookUrl'>{t('Webhook URL')}</Label>
+-            <Input
+-              id='webhookUrl'
+-              type='url'
+-              className='h-9'
+-              value={settings.webhook_url}
+-              onChange={(e) => updateField('webhook_url', e.target.value)}
+-              placeholder={t('https://example.com/webhook')}
+-            />
+-          </div>
+-          <div className='space-y-1.5'>
+-            <Label htmlFor='webhookSecret'>{t('Webhook Secret')}</Label>
+-            <PasswordInput
+-              id='webhookSecret'
+-              value={settings.webhook_secret}
+-              onChange={(e) => updateField('webhook_secret', e.target.value)}
+-              placeholder={t('Enter secret key')}
+-            />
+-          </div>
+-        </>
+-      )}
+-
+-      {/* Bark Settings */}
+-      {notifyType === 'bark' && (
+-        <div className='space-y-1.5'>
+-          <Label htmlFor='barkUrl'>{t('Bark Push URL')}</Label>
+-          <Input
+-            id='barkUrl'
+-            type='url'
+-            className='h-9'
+-            value={settings.bark_url}
+-            onChange={(e) => updateField('bark_url', e.target.value)}
+-            placeholder={t('https://api.day.app/yourkey/{{title}}/{{content}}')}
+-          />
+-          <p className='text-muted-foreground text-xs'>
+-            {t('Template variables:')} {'{{title}}'}, {'{{content}}'}
+-          </p>
+-        </div>
+-      )}
+-
+-      {/* Gotify Settings */}
+-      {notifyType === 'gotify' && (
+-        <>
+-          <div className='space-y-1.5'>
+-            <Label htmlFor='gotifyUrl'>{t('Gotify Server URL')}</Label>
+-            <Input
+-              id='gotifyUrl'
+-              type='url'
+-              className='h-9'
+-              value={settings.gotify_url}
+-              onChange={(e) => updateField('gotify_url', e.target.value)}
+-              placeholder={t('https://gotify.example.com')}
+-            />
+-            <p className='text-muted-foreground text-xs'>
+-              {t('Enter the full URL of your Gotify server')}
+-            </p>
+-          </div>
+-          <div className='space-y-1.5'>
+-            <Label htmlFor='gotifyToken'>{t('Gotify Application Token')}</Label>
+-            <PasswordInput
+-              id='gotifyToken'
+-              value={settings.gotify_token}
+-              onChange={(e) => updateField('gotify_token', e.target.value)}
+-              placeholder={t('Enter application token')}
+-            />
+-            <p className='text-muted-foreground text-xs'>
+-              {t('Token obtained from your Gotify application')}
+-            </p>
+-          </div>
+-          <div className='space-y-1.5'>
+-            <Label htmlFor='gotifyPriority'>{t('Message Priority')}</Label>
+-            <Input
+-              id='gotifyPriority'
+-              type='number'
+-              className='h-9'
+-              min='0'
+-              max='10'
+-              value={settings.gotify_priority}
+-              onChange={(e) =>
+-                updateField('gotify_priority', Number(e.target.value))
+-              }
+-              placeholder='5'
+-            />
+-            <p className='text-muted-foreground text-xs'>
+-              {t(
+-                'Priority level from 0 (lowest) to 10 (highest), default is 5'
+-              )}
+-            </p>
+-          </div>
+-          <div className='bg-muted/50 rounded-lg border p-3 sm:p-4'>
+-            <h5 className='mb-1.5 text-sm font-medium sm:mb-2'>
+-              {t('Setup Instructions')}
+-            </h5>
+-            <ol className='text-muted-foreground space-y-1 text-xs'>
+-              <li>{t('1. Create an application in your Gotify server')}</li>
+-              <li>{t('2. Copy the application token')}</li>
+-              <li>{t('3. Enter your Gotify server URL and token above')}</li>
+-            </ol>
+-            <p className='text-muted-foreground mt-3 text-xs'>
+-              {t('Learn more:')}{' '}
+-              <a
+-                href='https://gotify.net/'
+-                target='_blank'
+-                rel='noopener noreferrer'
+-                className='text-primary underline underline-offset-4'
+-              >
+-                {t('Gotify Documentation')}
+-              </a>
+-            </p>
+-          </div>
+-        </>
+-      )}
+-
+-      {/* Divider */}
+-      <div className='border-t' />
+-
+-      {/* Preferences Section */}
+-      <div className='space-y-3'>
+-        <div>
+-          <h4 className='text-sm font-medium'>{t('Preferences')}</h4>
+-          <p className='text-muted-foreground mt-1 text-xs'>
+-            {t('Configure your account behavior preferences')}
+-          </p>
+-        </div>
+-
+-        {/* Receive Upstream Model Update Notifications (admin only) */}
+-        {isAdmin && (
+-          <div className='flex items-start justify-between gap-3 rounded-lg border p-3 sm:items-center sm:p-4'>
+-            <div className='space-y-0.5'>
+-              <Label htmlFor='upstreamModelUpdateNotify'>
+-                {t('Receive Upstream Model Update Notifications')}
+-              </Label>
+-              <p className='text-muted-foreground line-clamp-3 text-xs sm:line-clamp-none sm:text-sm'>
+-                {t(
+-                  'Only available for admins. When enabled, you will receive a summary notification via your selected method when the scheduled model check detects upstream model changes or check failures.'
+-                )}
+-              </p>
+-            </div>
+-            <Switch
+-              id='upstreamModelUpdateNotify'
+-              className='shrink-0'
+-              checked={settings.upstream_model_update_notify_enabled}
+-              onCheckedChange={(checked) =>
+-                updateField('upstream_model_update_notify_enabled', checked)
+-              }
+-            />
+-          </div>
+-        )}
+-
+-        {/* Accept Unset Model Price */}
+-        <div className='flex items-start justify-between gap-3 rounded-lg border p-3 sm:items-center sm:p-4'>
+-          <div className='space-y-0.5'>
+-            <Label htmlFor='acceptUnsetPrice'>
+-              {t('Accept Unpriced Models')}
+-            </Label>
+-            <p className='text-muted-foreground text-xs sm:text-sm'>
+-              {t('Allow using models without price configuration')}
+-            </p>
+-          </div>
+-          <Switch
+-            id='acceptUnsetPrice'
+-            className='shrink-0'
+-            checked={settings.accept_unset_model_ratio_model}
+-            onCheckedChange={(checked) =>
+-              updateField('accept_unset_model_ratio_model', checked)
+-            }
+-          />
+-        </div>
+-
+-        {/* Record IP Log */}
+-        <div className='flex items-start justify-between gap-3 rounded-lg border p-3 sm:items-center sm:p-4'>
+-          <div className='space-y-0.5'>
+-            <Label htmlFor='recordIp'>{t('Record IP Address')}</Label>
+-            <p className='text-muted-foreground text-xs sm:text-sm'>
+-              {t('Log IP address for usage and error logs')}
+-            </p>
+-          </div>
+-          <Switch
+-            id='recordIp'
+-            className='shrink-0'
+-            checked={settings.record_ip_log}
+-            onCheckedChange={(checked) => updateField('record_ip_log', checked)}
+-          />
+-        </div>
++      <div className='space-y-1.5'>
++        <Label htmlFor='notifyEmail'>{t('Email')}</Label>
++        <Input
++          id='notifyEmail'
++          type='email'
++          className='h-9'
++          value={settings.notification_email}
++          onChange={(event) =>
++            updateField('notification_email', event.target.value)
++          }
++          placeholder={t('Leave empty to use account email')}
++        />
+       </div>
+
+-      {/* Save Button */}
+       <div className='flex justify-end'>
+         <Button onClick={handleSave} disabled={loading}>
+           {loading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+diff --git a/web/default/src/features/profile/index.tsx b/web/default/src/features/profile/index.tsx
+index f66d9540..eb042be0 100644
+--- a/web/default/src/features/profile/index.tsx
++++ b/web/default/src/features/profile/index.tsx
+@@ -16,34 +16,19 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+ For commercial licensing, please contact support@quantumnous.com
+ */
+-import { useAuthStore } from '@/stores/auth-store'
+-import { useStatus } from '@/hooks/use-status'
+ import { Main } from '@/components/layout'
+ import {
+   CardStaggerContainer,
+   CardStaggerItem,
+ } from '@/components/page-transition'
+-import { CheckinCalendarCard } from './components/checkin-calendar-card'
+ import { LanguagePreferencesCard } from './components/language-preferences-card'
+-import { PasskeyCard } from './components/passkey-card'
+ import { ProfileHeader } from './components/profile-header'
+ import { ProfileSecurityCard } from './components/profile-security-card'
+ import { ProfileSettingsCard } from './components/profile-settings-card'
+-import { SidebarModulesCard } from './components/sidebar-modules-card'
+-import { TwoFACard } from './components/two-fa-card'
+ import { useProfile } from './hooks'
+
+ export function Profile() {
+   const { profile, loading, refreshProfile } = useProfile()
+-  const { status } = useStatus()
+-  const permissions = useAuthStore((s) => s.auth.user?.permissions)
+-
+-  const checkinEnabled = status?.checkin_enabled === true
+-  const turnstileEnabled = !!(
+-    status?.turnstile_check && status?.turnstile_site_key
+-  )
+-  const turnstileSiteKey = status?.turnstile_site_key || ''
+-  const canConfigureSidebar = permissions?.sidebar_settings !== false
+
+   return (
+     <Main>
+@@ -54,32 +39,17 @@ export function Profile() {
+           </CardStaggerItem>
+
+           <CardStaggerItem>
+-            <div className='grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.46fr)] xl:items-start'>
+-              <div className='space-y-4 sm:space-y-6'>
+-                <ProfileSettingsCard
+-                  profile={profile}
+-                  loading={loading}
+-                  onProfileUpdate={refreshProfile}
+-                />
+-                <LanguagePreferencesCard
+-                  profile={profile}
+-                  onProfileUpdate={refreshProfile}
+-                />
+-                <ProfileSecurityCard profile={profile} loading={loading} />
+-              </div>
+-
+-              <div className='space-y-4 sm:space-y-6 xl:sticky xl:top-6'>
+-                {checkinEnabled && (
+-                  <CheckinCalendarCard
+-                    checkinEnabled={checkinEnabled}
+-                    turnstileEnabled={turnstileEnabled}
+-                    turnstileSiteKey={turnstileSiteKey}
+-                  />
+-                )}
+-                {canConfigureSidebar && <SidebarModulesCard />}
+-                <PasskeyCard loading={loading} />
+-                <TwoFACard loading={loading} />
+-              </div>
++            <div className='space-y-4 sm:space-y-6'>
++              <ProfileSettingsCard
++                profile={profile}
++                loading={loading}
++                onProfileUpdate={refreshProfile}
++              />
++              <LanguagePreferencesCard
++                profile={profile}
++                onProfileUpdate={refreshProfile}
++              />
++              <ProfileSecurityCard profile={profile} loading={loading} />
+             </div>
+           </CardStaggerItem>
+         </CardStaggerContainer>
+diff --git a/web/default/src/features/wallet/components/recharge-form-card.tsx b/web/default/src/features/wallet/components/recharge-form-card.tsx
+index 817d211f..2bc8bd05 100644
+--- a/web/default/src/features/wallet/components/recharge-form-card.tsx
++++ b/web/default/src/features/wallet/components/recharge-form-card.tsx
+@@ -17,10 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
+ For commercial licensing, please contact support@quantumnous.com
+ */
+ import { useState, useEffect } from 'react'
+-import { Gift, ExternalLink, Loader2, Receipt, WalletCards } from 'lucide-react'
++import { Loader2, Receipt, WalletCards } from 'lucide-react'
+ import { useTranslation } from 'react-i18next'
+-import { formatNumber } from '@/lib/format'
+-import { cn } from '@/lib/utils'
+ import { Alert, AlertDescription } from '@/components/ui/alert'
+ import { Button } from '@/components/ui/button'
+ import { Card, CardContent, CardHeader } from '@/components/ui/card'
+@@ -36,14 +34,11 @@ import {
+ } from '@/components/ui/tooltip'
+ import {
+   formatCurrency,
+-  getDiscountLabel,
+   getPaymentIcon,
+   getMinTopupAmount,
+-  calculatePresetPricing,
+ } from '../lib'
+ import type {
+   PaymentMethod,
+-  PresetAmount,
+   TopupInfo,
+   CreemProduct,
+   WaffoPayMethod,
+@@ -52,23 +47,13 @@ import { CreemProductsSection } from './creem-products-section'
+
+ interface RechargeFormCardProps {
+   topupInfo: TopupInfo | null
+-  presetAmounts: PresetAmount[]
+-  selectedPreset: number | null
+-  onSelectPreset: (preset: PresetAmount) => void
+   topupAmount: number
+   onTopupAmountChange: (amount: number) => void
+   paymentAmount: number
+   calculating: boolean
+   onPaymentMethodSelect: (method: PaymentMethod) => void
+   paymentLoading: string | null
+-  redemptionCode: string
+-  onRedemptionCodeChange: (code: string) => void
+-  onRedeem: () => void
+-  redeeming: boolean
+-  topupLink?: string
+   loading?: boolean
+-  priceRatio?: number
+-  usdExchangeRate?: number
+   onOpenBilling?: () => void
+   creemProducts?: CreemProduct[]
+   enableCreemTopup?: boolean
+@@ -82,23 +67,13 @@ interface RechargeFormCardProps {
+
+ export function RechargeFormCard({
+   topupInfo,
+-  presetAmounts,
+-  selectedPreset,
+-  onSelectPreset,
+   topupAmount,
+   onTopupAmountChange,
+   paymentAmount,
+   calculating,
+   onPaymentMethodSelect,
+   paymentLoading,
+-  redemptionCode,
+-  onRedemptionCodeChange,
+-  onRedeem,
+-  redeeming,
+-  topupLink,
+   loading,
+-  priceRatio = 1,
+-  usdExchangeRate = 1,
+   onOpenBilling,
+   creemProducts,
+   enableCreemTopup,
+@@ -110,10 +85,13 @@ export function RechargeFormCard({
+   enableWaffoPancakeTopup,
+ }: RechargeFormCardProps) {
+   const { t } = useTranslation()
+-  const [localAmount, setLocalAmount] = useState(topupAmount.toString())
++  const [localAmount, setLocalAmount] = useState(topupAmount.toString())
++  const [amountFocused, setAmountFocused] = useState(false)
+
+   useEffect(() => {
+-    setLocalAmount(topupAmount.toString())
++    if (!(amountFocused && topupAmount === 0)) {
++      setLocalAmount(topupAmount.toString())
++    }
+-  }, [topupAmount])
++  }, [amountFocused, topupAmount])
+
+   const handleAmountChange = (value: string) => {
+@@ -135,8 +112,6 @@ export function RechargeFormCard({
+   const hasWaffoPaymentMethods =
+     Array.isArray(waffoPayMethods) && waffoPayMethods.length > 0
+   const minTopup = getMinTopupAmount(topupInfo)
+-  const redemptionEnabled = topupInfo?.enable_redemption !== false
+-
+   if (loading) {
+     return (
+       <Card data-card-hover='false' className='gap-0 overflow-hidden py-0'>
+@@ -146,16 +121,6 @@ export function RechargeFormCard({
+         </CardHeader>
+         <CardContent className='space-y-4 p-3 sm:space-y-6 sm:p-5'>
+           <div className='space-y-4 sm:space-y-6'>
+-            {/* Preset Amounts Skeleton */}
+-            <div className='space-y-3'>
+-              <Skeleton className='h-3 w-16' />
+-              <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
+-                {Array.from({ length: 8 }).map((_, i) => (
+-                  <Skeleton key={i} className='h-[72px] rounded-lg' />
+-                ))}
+-              </div>
+-            </div>
+-
+             {/* Custom Amount Input Skeleton */}
+             <div className='space-y-3'>
+               <Skeleton className='h-3 w-28' />
+@@ -172,15 +137,6 @@ export function RechargeFormCard({
+               </div>
+             </div>
+           </div>
+-
+-          {/* Redemption Code Section Skeleton */}
+-          <div className='space-y-3 border-t pt-8'>
+-            <Skeleton className='h-3 w-24' />
+-            <div className='flex gap-2'>
+-              <Skeleton className='h-10 flex-1' />
+-              <Skeleton className='h-10 w-20' />
+-            </div>
+-          </div>
+         </CardContent>
+       </Card>
+     )
+@@ -212,66 +168,6 @@ export function RechargeFormCard({
+         <div className='space-y-4 sm:space-y-6'>
+           {hasConfigurableTopup && (
+             <>
+-              {presetAmounts.length > 0 && (
+-                <div className='space-y-2.5 sm:space-y-3'>
+-                  <Label className='text-muted-foreground text-xs font-medium tracking-wider uppercase'>
+-                    {t('Amount')}
+-                  </Label>
+-                  <div className='grid grid-cols-2 gap-1.5 sm:gap-3 md:grid-cols-4'>
+-                    {presetAmounts.map((preset, index) => {
+-                      const discount =
+-                        preset.discount ||
+-                        topupInfo?.discount?.[preset.value] ||
+-                        1.0
+-                      const {
+-                        displayValue,
+-                        actualPrice,
+-                        savedAmount,
+-                        hasDiscount,
+-                      } = calculatePresetPricing(
+-                        preset.value,
+-                        priceRatio,
+-                        discount,
+-                        usdExchangeRate
+-                      )
+-                      return (
+-                        <Button
+-                          key={index}
+-                          variant='outline'
+-                          className={cn(
+-                            'flex min-h-16 flex-col items-start rounded-lg px-3 py-2.5 text-left whitespace-normal sm:min-h-[72px] sm:p-4',
+-                            selectedPreset === preset.value
+-                              ? 'border-foreground bg-foreground/5 dark:border-foreground dark:bg-foreground/10'
+-                              : 'border-muted'
+-                          )}
+-                          onClick={() => onSelectPreset(preset)}
+-                        >
+-                          <div className='flex w-full items-center justify-between'>
+-                            <div className='text-base font-semibold sm:text-lg'>
+-                              {formatNumber(displayValue)}
+-                            </div>
+-                            {hasDiscount && (
+-                              <div className='text-xs font-medium text-green-600'>
+-                                {getDiscountLabel(discount)}
+-                              </div>
+-                            )}
+-                          </div>
+-                          <div className='text-muted-foreground mt-1.5 w-full text-xs sm:mt-2'>
+-                            Pay {formatCurrency(actualPrice)}
+-                            {hasDiscount && savedAmount > 0 && (
+-                              <span className='text-green-600'>
+-                                {' '}
+-                                • Save {formatCurrency(savedAmount)}
+-                              </span>
+-                            )}
+-                          </div>
+-                        </Button>
+-                      )
+-                    })}
+-                  </div>
+-                </div>
+-              )}
+-
+               <div className='space-y-2.5 sm:space-y-3'>
+                 <Label
+                   htmlFor='topup-amount'
+@@ -282,12 +178,28 @@ export function RechargeFormCard({
+                 <div className='grid grid-cols-[minmax(0,1fr)_minmax(110px,0.55fr)] gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center'>
+                   <Input
+                     id='topup-amount'
+                     type='number'
+                     value={localAmount}
+                     onChange={(e) => handleAmountChange(e.target.value)}
++                    onFocus={() => {
++                      setAmountFocused(true)
++                      if ((parseInt(localAmount) || 0) === 0) {
++                        setLocalAmount('')
++                      }
++                    }}
++                    onBlur={() => {
++                      setAmountFocused(false)
++                      if (localAmount === '') {
++                        setLocalAmount('0')
++                      }
++                    }}
+                     min={minTopup}
+                     placeholder={`Minimum ${minTopup}`}
+-                    className='h-9 text-base sm:h-10 sm:text-lg'
++                    className={`h-9 text-base sm:h-10 sm:text-lg ${
++                      (parseInt(localAmount) || 0) === 0
++                        ? 'text-muted-foreground'
++                        : 'text-foreground'
++                    }`}
+                   />
+                   <div className='bg-muted/30 flex min-h-9 items-center justify-between gap-2 rounded-md border px-3 lg:min-w-52'>
+                     <span className='text-muted-foreground truncate text-xs'>
+@@ -462,7 +358,7 @@ export function RechargeFormCard({
+         <Alert>
+           <AlertDescription>
+             {t(
+-              'Online topup is not enabled. Please use redemption code or contact administrator.'
++              'Online topup is not enabled. Please contact support.'
+             )}
+           </AlertDescription>
+         </Alert>
+@@ -484,60 +380,6 @@ export function RechargeFormCard({
+           </div>
+         )}
+
+-      {/* Redemption Code Section */}
+-      {redemptionEnabled ? (
+-        <div className='space-y-2.5 border-t pt-4 sm:space-y-3 sm:pt-6'>
+-          <div className='flex items-center gap-2'>
+-            <Gift className='text-muted-foreground h-4 w-4' />
+-            <Label
+-              htmlFor='redemption-code'
+-              className='text-muted-foreground text-xs font-medium tracking-wider uppercase'
+-            >
+-              {t('Have a Code?')}
+-            </Label>
+-          </div>
+-          <div className='grid grid-cols-[minmax(0,1fr)_auto] gap-2'>
+-            <Input
+-              id='redemption-code'
+-              value={redemptionCode}
+-              onChange={(e) => onRedemptionCodeChange(e.target.value)}
+-              placeholder={t('Enter your redemption code')}
+-              className='h-9 min-w-0'
+-            />
+-            <Button
+-              onClick={onRedeem}
+-              disabled={redeeming}
+-              variant='outline'
+-              className='h-9 px-4'
+-            >
+-              {redeeming && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+-              {t('Redeem')}
+-            </Button>
+-          </div>
+-          {topupLink && (
+-            <p className='text-muted-foreground text-xs'>
+-              {t('Need a redemption code?')}{' '}
+-              <a
+-                href={topupLink}
+-                target='_blank'
+-                rel='noopener noreferrer'
+-                className='inline-flex items-center gap-1 underline-offset-4 hover:underline'
+-              >
+-                {t('Get one here')}
+-                <ExternalLink className='h-3 w-3' />
+-              </a>
+-            </p>
+-          )}
+-        </div>
+-      ) : (
+-        <Alert className='border-t'>
+-          <AlertDescription>
+-            {t(
+-              'Redemption codes are disabled until the administrator confirms compliance terms.'
+-            )}
+-          </AlertDescription>
+-        </Alert>
+-      )}
+     </TitledCard>
+   )
+ }
+diff --git a/web/default/src/features/wallet/index.tsx b/web/default/src/features/wallet/index.tsx
+index 67eb8959..8ccca6ed 100644
+--- a/web/default/src/features/wallet/index.tsx
++++ b/web/default/src/features/wallet/index.tsx
+@@ -16,17 +16,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+ For commercial licensing, please contact support@quantumnous.com
+ */
+-import { useState, useEffect, useCallback, useMemo } from 'react'
++import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+ import { useTranslation } from 'react-i18next'
+ import { getSelf } from '@/lib/api'
+-import { useStatus } from '@/hooks/use-status'
+ import { useSystemConfig } from '@/hooks/use-system-config'
+ import { SectionPageLayout } from '@/components/layout'
+-import { AffiliateRewardsCard } from './components/affiliate-rewards-card'
+ import { BillingHistoryDialog } from './components/dialogs/billing-history-dialog'
+ import { CreemConfirmDialog } from './components/dialogs/creem-confirm-dialog'
+ import { PaymentConfirmDialog } from './components/dialogs/payment-confirm-dialog'
+-import { TransferDialog } from './components/dialogs/transfer-dialog'
+ import { RechargeFormCard } from './components/recharge-form-card'
+ import { SubscriptionPlansCard } from './components/subscription-plans-card'
+ import { WalletStatsCard } from './components/wallet-stats-card'
+@@ -34,8 +31,6 @@ import { DEFAULT_DISCOUNT_RATE } from './constants'
+ import {
+   useTopupInfo,
+   usePayment,
+-  useAffiliate,
+-  useRedemption,
+   useCreemPayment,
+   useWaffoPayment,
+   useWaffoPancakePayment,
+@@ -48,7 +43,6 @@ import {
+ import type {
+   UserWalletData,
+   PaymentMethod,
+-  PresetAmount,
+   CreemProduct,
+ } from './types'
+
+@@ -61,22 +55,19 @@ export function Wallet(props: WalletProps) {
+   const [user, setUser] = useState<UserWalletData | null>(null)
+   const [userLoading, setUserLoading] = useState(true)
+   const [topupAmount, setTopupAmount] = useState(0)
+-  const [selectedPreset, setSelectedPreset] = useState<number | null>(null)
++  const initializedTopup = useRef(false)
+   const [selectedPaymentMethod, setSelectedPaymentMethod] =
+     useState<PaymentMethod>()
+   const [paymentLoading, setPaymentLoading] = useState<string | null>(null)
+   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+-  const [transferDialogOpen, setTransferDialogOpen] = useState(false)
+   const [billingDialogOpen, setBillingDialogOpen] = useState(false)
+-  const [redemptionCode, setRedemptionCode] = useState('')
+   const [creemDialogOpen, setCreemDialogOpen] = useState(false)
+   const [selectedCreemProduct, setSelectedCreemProduct] =
+     useState<CreemProduct | null>(null)
+   const [showSubscriptionPanel, setShowSubscriptionPanel] = useState(true)
+
+-  const { status } = useStatus()
+   const { currency } = useSystemConfig()
+-  const { topupInfo, presetAmounts, loading: topupLoading } = useTopupInfo()
++  const { topupInfo, loading: topupLoading } = useTopupInfo()
+
+   // Calculate effective exchange rate - when display type is USD, use rate of 1
+   const effectiveUsdExchangeRate = useMemo(() => {
+@@ -91,25 +82,20 @@ export function Wallet(props: WalletProps) {
+     calculatePaymentAmount,
+     processPayment,
+   } = usePayment()
+-  const {
+-    affiliateLink,
+-    loading: affiliateLoading,
+-    transferQuota,
+-    transferring,
+-  } = useAffiliate()
+-  const { redeeming, redeemCode } = useRedemption()
+   const { processing: creemProcessing, processCreemPayment } = useCreemPayment()
+   const { processWaffoPayment } = useWaffoPayment()
+   const { processing: pancakeProcessing, processWaffoPancakePayment } =
+     useWaffoPancakePayment()
+
+   // Fetch and refresh user data
+-  const fetchUser = useCallback(async () => {
++  const fetchUser = useCallback(async (): Promise<UserWalletData | null> => {
+     try {
+       setUserLoading(true)
+       const response = await getSelf()
+       if (response.success && response.data) {
+-        setUser(response.data as UserWalletData)
++        const walletData = response.data as UserWalletData
++        setUser(walletData)
++        return walletData
+       }
+     } catch (error) {
+       // eslint-disable-next-line no-console
+@@ -117,12 +103,58 @@ export function Wallet(props: WalletProps) {
+     } finally {
+       setUserLoading(false)
+     }
++    return null
+   }, [])
+
+   useEffect(() => {
+     fetchUser()
+   }, [fetchUser])
+
++  useEffect(() => {
++    const url = new URL(window.location.href)
++    if (url.searchParams.get('payment_return') !== 'pancake') return
++
++    let cancelled = false
++    let timer: ReturnType<typeof setTimeout> | undefined
++    let previousQuota: number | null = null
++
++    try {
++      const storedUser = JSON.parse(localStorage.getItem('user') || 'null')
++      if (typeof storedUser?.quota === 'number') {
++        previousQuota = storedUser.quota
++      }
++    } catch {
++      previousQuota = null
++    }
++
++    const finish = () => {
++      url.searchParams.delete('payment_return')
++      window.history.replaceState({}, '', `${url.pathname}${url.search}`)
++    }
++
++    const refreshAfterPayment = async () => {
++      const refreshedUser = await fetchUser()
++      if (cancelled) return
++
++      if (refreshedUser) {
++        if (previousQuota === null) {
++          previousQuota = refreshedUser.quota
++        } else if (refreshedUser.quota !== previousQuota) {
++          finish()
++          return
++        }
++      }
++      timer = setTimeout(refreshAfterPayment, 2_000)
++    }
++
++    refreshAfterPayment()
++
++    return () => {
++      cancelled = true
++      if (timer) clearTimeout(timer)
++    }
++  }, [fetchUser])
++
+   useEffect(() => {
+     if (props.initialShowHistory) {
+       setBillingDialogOpen(true)
+@@ -132,7 +164,6 @@ export function Wallet(props: WalletProps) {
+
+   // Initialize topup amount when topup info is loaded
+   useEffect(() => {
+-    if (topupInfo && topupAmount === 0) {
++    if (topupInfo && !initializedTopup.current) {
++      initializedTopup.current = true
+-      const minTopup = getMinTopupAmount(topupInfo)
+-      setTopupAmount(minTopup)
+
+@@ -140,24 +173,16 @@ export function Wallet(props: WalletProps) {
+       const defaultPaymentType = getDefaultPaymentType(topupInfo)
+-      calculatePaymentAmount(minTopup, defaultPaymentType)
++      calculatePaymentAmount(0, defaultPaymentType)
+     }
+-  }, [topupInfo, topupAmount, calculatePaymentAmount])
++  }, [topupInfo, calculatePaymentAmount])
+
+   // Get current payment type (selected or default)
+   const getCurrentPaymentType = useCallback(() => {
+     return selectedPaymentMethod?.type || getDefaultPaymentType(topupInfo)
+   }, [selectedPaymentMethod, topupInfo])
+
+-  // Handle preset selection
+-  const handleSelectPreset = (preset: PresetAmount) => {
+-    setTopupAmount(preset.value)
+-    setSelectedPreset(preset.value)
+-    calculatePaymentAmount(preset.value, getCurrentPaymentType())
+-  }
+-
+   // Handle topup amount change
+   const handleTopupAmountChange = (amount: number) => {
+     setTopupAmount(amount)
+-    setSelectedPreset(null)
+     calculatePaymentAmount(amount, getCurrentPaymentType())
+   }
+
+@@ -196,26 +221,6 @@ export function Wallet(props: WalletProps) {
+     }
+   }
+
+-  // Handle redemption
+-  const handleRedeem = async () => {
+-    if (!redemptionCode) return
+-
+-    const success = await redeemCode(redemptionCode)
+-    if (success) {
+-      setRedemptionCode('')
+-      await fetchUser()
+-    }
+-  }
+-
+-  // Handle transfer
+-  const handleTransfer = async (amount: number) => {
+-    const success = await transferQuota(amount)
+-    if (success) {
+-      await fetchUser()
+-    }
+-    return success
+-  }
+-
+   // Handle Creem product selection
+   const handleCreemProductSelect = (product: CreemProduct) => {
+     setSelectedCreemProduct(product)
+@@ -275,23 +280,13 @@ export function Wallet(props: WalletProps) {
+               <div id='wallet-add-funds' className='scroll-mt-4'>
+                 <RechargeFormCard
+                   topupInfo={topupInfo}
+-                  presetAmounts={presetAmounts}
+-                  selectedPreset={selectedPreset}
+-                  onSelectPreset={handleSelectPreset}
+                   topupAmount={topupAmount}
+                   onTopupAmountChange={handleTopupAmountChange}
+                   paymentAmount={paymentAmount}
+                   calculating={calculating}
+                   onPaymentMethodSelect={handlePaymentMethodSelect}
+                   paymentLoading={paymentLoading}
+-                  redemptionCode={redemptionCode}
+-                  onRedemptionCodeChange={setRedemptionCode}
+-                  onRedeem={handleRedeem}
+-                  redeeming={redeeming}
+-                  topupLink={topupInfo?.topup_link}
+                   loading={topupLoading}
+-                  priceRatio={(status?.price as number) || 1}
+-                  usdExchangeRate={effectiveUsdExchangeRate}
+                   onOpenBilling={() => setBillingDialogOpen(true)}
+                   creemProducts={topupInfo?.creem_products}
+                   enableCreemTopup={topupInfo?.enable_creem_topup}
+@@ -313,16 +308,6 @@ export function Wallet(props: WalletProps) {
+                 onPurchaseSuccess={fetchUser}
+               />
+             </div>
+-
+-            <AffiliateRewardsCard
+-              user={user}
+-              affiliateLink={affiliateLink}
+-              onTransfer={() => setTransferDialogOpen(true)}
+-              complianceConfirmed={
+-                topupInfo?.payment_compliance_confirmed !== false
+-              }
+-              loading={affiliateLoading}
+-            />
+           </div>
+         </SectionPageLayout.Content>
+       </SectionPageLayout>
+@@ -340,14 +325,6 @@ export function Wallet(props: WalletProps) {
+         usdExchangeRate={effectiveUsdExchangeRate}
+       />
+
+-      <TransferDialog
+-        open={transferDialogOpen}
+-        onOpenChange={setTransferDialogOpen}
+-        onConfirm={handleTransfer}
+-        availableQuota={user?.aff_quota ?? 0}
+-        transferring={transferring}
+-      />
+-
+       <BillingHistoryDialog
+         open={billingDialogOpen}
+         onOpenChange={setBillingDialogOpen}
+diff --git a/web/default/index.html b/web/default/index.html
+index 4257f666..713e8ec9 100644
+--- a/web/default/index.html
++++ b/web/default/index.html
+@@ -6,8 +6,8 @@
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+     <!-- Primary Meta Tags -->
+-    <title>New API</title>
+-    <meta name="title" content="New API" />
++    <title>CCAI Service</title>
++    <meta name="title" content="CCAI Service" />
+     <meta
+       name="description"
+       content="Unified AI API gateway and admin dashboard."
+diff --git a/web/default/src/components/layout/components/public-header.tsx b/web/default/src/components/layout/components/public-header.tsx
+index 7030a7c5..2f48a4cc 100644
+--- a/web/default/src/components/layout/components/public-header.tsx
++++ b/web/default/src/components/layout/components/public-header.tsx
+@@ -61,7 +61,7 @@ export interface PublicHeaderProps {
+
+ export function PublicHeader(props: PublicHeaderProps) {
+   const {
+-    navLinks = defaultTopNavLinks,
++    navLinks,
+     showThemeSwitch = true,
+     showLanguageSwitcher = true,
+     logo: customLogo,
+@@ -94,7 +94,8 @@ export function PublicHeader(props: PublicHeaderProps) {
+   const user = auth.user
+   const isAuthenticated = !!user
+   const displaySiteName = customSiteName || systemName
+-  const links = dynamicLinks.length > 0 ? dynamicLinks : navLinks
++  const links =
++    navLinks ?? (dynamicLinks.length > 0 ? dynamicLinks : defaultTopNavLinks)
+
+   useEffect(() => {
+     const onScroll = () => setScrolled(window.scrollY > 20)
+diff --git a/web/default/src/features/home/index.tsx b/web/default/src/features/home/index.tsx
+index 0355a56b..e489b24f 100644
+--- a/web/default/src/features/home/index.tsx
++++ b/web/default/src/features/home/index.tsx
+@@ -20,54 +20,22 @@ import { useTranslation } from 'react-i18next'
+ import { useAuthStore } from '@/stores/auth-store'
+-import { Markdown } from '@/components/ui/markdown'
+ import { PublicLayout } from '@/components/layout'
+-import { Footer } from '@/components/layout/components/footer'
+-import { CTA, Features, Hero, HowItWorks, Stats } from './components'
++import { Hero } from './components'
+-import { useHomePageContent } from './hooks'
+
+ export function Home() {
+   const { t } = useTranslation()
+   const { auth } = useAuthStore()
+   const isAuthenticated = !!auth.user
+-  const { content, isLoaded, isUrl } = useHomePageContent()
+-
+-  if (!isLoaded) {
+-    return (
+-      <PublicLayout showMainContainer={false}>
+-        <main className='flex min-h-screen items-center justify-center'>
+-          <div className='text-muted-foreground'>{t('Loading...')}</div>
+-        </main>
+-      </PublicLayout>
+-    )
+-  }
+-
+-  if (content) {
+-    return (
+-      <PublicLayout showMainContainer={false}>
+-        <main className='overflow-x-hidden'>
+-          {isUrl ? (
+-            <iframe
+-              src={content}
+-              className='h-screen w-full border-none'
+-              title={t('Custom Home Page')}
+-            />
+-          ) : (
+-            <div className='container mx-auto py-8'>
+-              <Markdown className='custom-home-content'>{content}</Markdown>
+-            </div>
+-          )}
+-        </main>
+-      </PublicLayout>
+-    )
+-  }
+
+   return (
+-    <PublicLayout showMainContainer={false}>
++    <PublicLayout
++      showMainContainer={false}
++      siteName='CCAI Service'
++      navLinks={[]}
++    >
+       <Hero isAuthenticated={isAuthenticated} />
+-      <Stats />
+-      <Features />
+-      <HowItWorks />
+-      <CTA isAuthenticated={isAuthenticated} />
+-      <Footer />
++      <footer className='border-border/40 text-muted-foreground/60 relative z-10 border-t px-6 py-6 text-center text-xs'>
++        &copy; {new Date().getFullYear()} CCAI Service · {t('API Proxy Service')}
++      </footer>
+     </PublicLayout>
+   )
+ }
+diff --git a/web/default/src/features/home/components/sections/hero.tsx b/web/default/src/features/home/components/sections/hero.tsx
+index 8f44d221..28a3fd25 100644
+--- a/web/default/src/features/home/components/sections/hero.tsx
++++ b/web/default/src/features/home/components/sections/hero.tsx
+@@ -17,10 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
+ For commercial licensing, please contact support@quantumnous.com
+ */
+ import { Link } from '@tanstack/react-router'
+-import { CherryStudio } from '@lobehub/icons'
+-import { ArrowRight, BookOpen } from 'lucide-react'
++import { ArrowRight } from 'lucide-react'
+ import { useTranslation } from 'react-i18next'
+-import { useStatus } from '@/hooks/use-status'
+ import { Button } from '@/components/ui/button'
+ import { HeroTerminalDemo } from '../hero-terminal-demo'
+
+@@ -29,56 +27,11 @@ interface HeroProps {
+   isAuthenticated?: boolean
+ }
+
+-// Stylized three-dots indicator representing "More"
+-const MoreIcon = () => (
+-  <svg
+-    className='text-muted-foreground/60 group-hover:text-foreground size-6 shrink-0 transition-colors'
+-    viewBox='0 0 24 24'
+-    fill='none'
+-    xmlns='http://www.w3.org/2000/svg'
+-  >
+-    <circle cx='6' cy='12' r='2' fill='currentColor' />
+-    <circle cx='12' cy='12' r='2' fill='currentColor' />
+-    <circle cx='18' cy='12' r='2' fill='currentColor' />
+-  </svg>
+-)
+-
+ export function Hero(props: HeroProps) {
+   const { t } = useTranslation()
+-  const { status } = useStatus()
+-  const docsUrl =
+-    (status?.docs_link as string | undefined) || 'https://docs.newapi.pro'
+-
+-  const renderDocsButton = () => {
+-    const isExternal = docsUrl.startsWith('http')
+-    if (isExternal) {
+-      return (
+-        <Button
+-          variant='outline'
+-          className='group border-border/50 hover:border-border hover:bg-muted/50 inline-flex h-11 items-center gap-1.5 rounded-lg px-5 text-sm font-medium'
+-          render={
+-            <a href={docsUrl} target='_blank' rel='noopener noreferrer' />
+-          }
+-        >
+-          <BookOpen className='text-muted-foreground/80 group-hover:text-foreground size-4 transition-colors duration-200' />
+-          <span>{t('Docs')}</span>
+-        </Button>
+-      )
+-    }
+-    return (
+-      <Button
+-        variant='outline'
+-        className='group border-border/50 hover:border-border hover:bg-muted/50 inline-flex h-11 items-center gap-1.5 rounded-lg px-5 text-sm font-medium'
+-        render={<Link to={docsUrl} />}
+-      >
+-        <BookOpen className='text-muted-foreground/80 group-hover:text-foreground size-4 transition-colors duration-200' />
+-        <span>{t('Docs')}</span>
+-      </Button>
+-    )
+-  }
+
+   return (
+-    <section className='relative z-10 overflow-hidden px-6 pt-24 pb-16 md:pt-32 md:pb-24 lg:pt-36 lg:pb-28'>
++    <section className='relative z-10 flex min-h-[calc(100svh-9rem)] items-center overflow-hidden px-6 pt-24 pb-16 md:pt-28 md:pb-20'>
+       {/* Radial gradient background */}
+       <div
+         aria-hidden
+@@ -98,7 +51,7 @@ export function Hero(props: HeroProps) {
+       />
+
+       <div className='mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 lg:grid-cols-12 lg:gap-8'>
+-        {/* Left Column: Title, description, action buttons and application support */}
++        {/* Left Column: API proxy introduction and service entry */}
+         <div className='flex flex-col items-start text-left lg:col-span-6'>
+           {/* Top Pill Badge */}
+           <div
+@@ -109,17 +62,17 @@ export function Hero(props: HeroProps) {
+               <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75' />
+               <span className='relative inline-flex size-1.5 rounded-full bg-blue-500 dark:bg-blue-400' />
+             </span>
+-            <span>{t('AI Application Infrastructure Foundation')}</span>
++            <span>{t('API Proxy Service')}</span>
+           </div>
+
+           <h1
+             className='landing-animate-fade-up text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.15] font-bold tracking-tight'
+             style={{ animationDelay: '60ms' }}
+           >
+-            {t('Unified API Gateway for')}
++            {t('One endpoint for')}
+             <br />
+             <span className='bg-gradient-to-r from-blue-400 via-violet-400 to-purple-500 bg-clip-text text-transparent'>
+-              {t('Vast Range of AI Models')}
++              {t('AI model APIs')}
+             </span>
+           </h1>
+           <p
+@@ -127,7 +80,7 @@ export function Hero(props: HeroProps) {
+             style={{ animationDelay: '120ms' }}
+           >
+             {t(
+-              'Access a vast selection of models via a standard, unified API protocol. Power AI applications, manage digital assets, and connect the Future.'
++              'Proxy requests to supported AI models through a unified, compatible API endpoint.'
+             )}
+           </p>
+
+@@ -136,98 +89,32 @@ export function Hero(props: HeroProps) {
+             style={{ animationDelay: '180ms' }}
+           >
+             {props.isAuthenticated ? (
+-              <>
+-                <Button
+-                  className='group h-11 rounded-lg px-5 text-sm font-medium'
+-                  render={<Link to='/dashboard' />}
+-                >
+-                  {t('Go to Dashboard')}
+-                  <ArrowRight className='ml-1.5 size-4 transition-transform duration-200 group-hover:translate-x-0.5' />
+-                </Button>
+-                {renderDocsButton()}
+-              </>
++              <Button
++                className='group h-11 rounded-lg px-5 text-sm font-medium'
++                render={<Link to='/dashboard' />}
++              >
++                {t('Open API Console')}
++                <ArrowRight className='ml-1.5 size-4 transition-transform duration-200 group-hover:translate-x-0.5' />
++              </Button>
+             ) : (
+               <>
+                 <Button
+                   className='group h-11 rounded-lg px-5 text-sm font-medium'
+                   render={<Link to='/sign-up' />}
+                 >
+-                  {t('Get Started')}
++                  {t('Create API Account')}
+                   <ArrowRight className='ml-1.5 size-4 transition-transform duration-200 group-hover:translate-x-0.5' />
+                 </Button>
+                 <Button
+                   variant='outline'
+                   className='border-border/50 hover:border-border hover:bg-muted/50 h-11 rounded-lg px-5 text-sm font-medium'
+-                  render={<Link to='/pricing' />}
++                  render={<Link to='/sign-in' />}
+                 >
+-                  {t('View Pricing')}
++                  {t('Sign In')}
+                 </Button>
+-                {renderDocsButton()}
+               </>
+             )}
+           </div>
+-
+-          {/* Supported Apps (参考图二样式，进行卡片化和信息扩充设计，增加视觉高度) */}
+-          <div
+-            className='landing-animate-fade-up mt-10 w-full max-w-xl opacity-0'
+-            style={{ animationDelay: '240ms' }}
+-          >
+-            <div className='mb-4 flex flex-col gap-1'>
+-              <span className='text-muted-foreground/50 text-[10px] font-bold tracking-[0.15em] uppercase'>
+-                {t('Supported Applications')}
+-              </span>
+-              <p className='text-muted-foreground/60 text-xs leading-relaxed'>
+-                {t(
+-                  'Supports one-click configuration and perfectly adapts to NewAPI multi-protocol configuration.'
+-                )}
+-              </p>
+-            </div>
+-            <div className='flex flex-wrap items-center gap-3'>
+-              {/* Cherry Studio */}
+-              <a
+-                href='https://cherry-ai.com'
+-                target='_blank'
+-                rel='noopener noreferrer'
+-                className='group border-border/40 bg-muted/15 text-foreground/80 hover:border-border hover:bg-muted/30 hover:text-foreground flex items-center gap-3 rounded-full border px-5 py-2.5 text-sm font-medium shadow-[0_1px_2.5px_rgba(0,0,0,0.01)] backdrop-blur-xs transition-all duration-300 hover:scale-[1.02]'
+-              >
+-                <CherryStudio.Color size={24} className='shrink-0' />
+-                <span>Cherry Studio</span>
+-              </a>
+-
+-              {/* CC Switch */}
+-              <a
+-                href='https://ccswitch.io'
+-                target='_blank'
+-                rel='noopener noreferrer'
+-                className='group border-border/40 bg-muted/15 text-foreground/80 hover:border-border hover:bg-muted/30 hover:text-foreground flex items-center gap-3 rounded-full border px-5 py-2.5 text-sm font-medium shadow-[0_1px_2.5px_rgba(0,0,0,0.01)] backdrop-blur-xs transition-all duration-300 hover:scale-[1.02]'
+-              >
+-                <img
+-                  src='https://ccswitch.io/favicon.png'
+-                  alt='CC Switch'
+-                  className='size-6 shrink-0 rounded-md object-contain'
+-                  onError={(e) => {
+-                    // Fallback to a styled text avatar if the remote favicon fails to load in sandbox or local environments
+-                    e.currentTarget.style.display = 'none'
+-                    const fallback = e.currentTarget.nextSibling as HTMLElement
+-                    if (fallback) fallback.style.display = 'flex'
+-                  }}
+-                />
+-                <span
+-                  style={{ display: 'none' }}
+-                  className='size-6 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-[10px] font-bold text-blue-600 dark:bg-blue-400/10 dark:text-blue-400'
+-                >
+-                  CC
+-                </span>
+-                <span>CC Switch</span>
+-              </a>
+-
+-              {/* "更多" */}
+-              <div className='group border-border/40 bg-muted/15 text-foreground/55 hover:border-border hover:bg-muted/30 hover:text-foreground flex cursor-default items-center gap-2.5 rounded-full border px-5 py-2.5 text-sm font-medium shadow-[0_1px_2.5px_rgba(0,0,0,0.01)] backdrop-blur-xs transition-all duration-300 hover:scale-[1.02]'>
+-                <MoreIcon />
+-                <span>{t('More Apps')}</span>
+-              </div>
+-            </div>
+-          </div>
+         </div>
+
+         {/* Right Column: Hero Terminal API Demo */}

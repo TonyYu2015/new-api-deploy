@@ -1,0 +1,91 @@
+diff --git a/web/default/src/features/wallet/index.tsx b/web/default/src/features/wallet/index.tsx
+index 5d0d6d52..d669b796 100644
+--- a/web/default/src/features/wallet/index.tsx
++++ b/web/default/src/features/wallet/index.tsx
+@@ -50,6 +50,45 @@ interface WalletProps {
+   initialShowHistory?: boolean
+ }
+
++const PANCAKE_QUOTA_BASELINE_STORAGE_KEY =
++  'waffo_pancake_quota_before_payment'
++
++function clearPancakeQuotaBaseline() {
++  try {
++    sessionStorage.removeItem(PANCAKE_QUOTA_BASELINE_STORAGE_KEY)
++  } catch {
++    // Storage can be unavailable in restricted browser contexts.
++  }
++}
++
++function readPancakeQuotaBaseline(): number | null {
++  try {
++    const storedQuota = sessionStorage.getItem(
++      PANCAKE_QUOTA_BASELINE_STORAGE_KEY
++    )
++    if (storedQuota === null) return null
++
++    const quota = Number(storedQuota)
++    return Number.isSafeInteger(quota) && quota >= 0 ? quota : null
++  } catch {
++    return null
++  }
++}
++
++function storePancakeQuotaBaseline(quota: number | undefined) {
++  clearPancakeQuotaBaseline()
++  if (!Number.isSafeInteger(quota) || (quota ?? -1) < 0) return
++
++  try {
++    sessionStorage.setItem(
++      PANCAKE_QUOTA_BASELINE_STORAGE_KEY,
++      String(quota)
++    )
++  } catch {
++    // The return page still refreshes once when storage is unavailable.
++  }
++}
++
+ export function Wallet(props: WalletProps) {
+   const { t } = useTranslation()
+   const [user, setUser] = useState<UserWalletData | null>(null)
+@@ -116,18 +155,10 @@ export function Wallet(props: WalletProps) {
+
+     let cancelled = false
+     let timer: ReturnType<typeof setTimeout> | undefined
+-    let previousQuota: number | null = null
+-
+-    try {
+-      const storedUser = JSON.parse(localStorage.getItem('user') || 'null')
+-      if (typeof storedUser?.quota === 'number') {
+-        previousQuota = storedUser.quota
+-      }
+-    } catch {
+-      previousQuota = null
+-    }
++    let previousQuota = readPancakeQuotaBaseline()
+
+     const finish = () => {
++      clearPancakeQuotaBaseline()
+       url.searchParams.delete('payment_return')
+       window.history.replaceState({}, '', `${url.pathname}${url.search}`)
+     }
+@@ -209,10 +240,19 @@ export function Wallet(props: WalletProps) {
+     if (!selectedPaymentMethod) return
+
+     const isPancake = isWaffoPancakePayment(selectedPaymentMethod.type)
++    if (isPancake) {
++      const freshUser = await fetchUser()
++      storePancakeQuotaBaseline(freshUser?.quota ?? user?.quota)
++    }
++
+     const success = isPancake
+       ? await processWaffoPancakePayment(topupAmount)
+       : await processPayment(topupAmount, selectedPaymentMethod.type)
+
++    if (isPancake && !success) {
++      clearPancakeQuotaBaseline()
++    }
++
+     if (success) {
+       setConfirmDialogOpen(false)
+       await fetchUser()
