@@ -1,7 +1,7 @@
-diff --git a/web/default/src/features/system-settings/models/model-pricing-snapshots.ts b/web/default/src/features/system-settings/models/model-pricing-snapshots.ts
-index 4668f27..5f243e8 100644
---- a/web/default/src/features/system-settings/models/model-pricing-snapshots.ts
-+++ b/web/default/src/features/system-settings/models/model-pricing-snapshots.ts
+diff --git a/web/src/features/system-settings/models/model-pricing-snapshots.ts b/web/src/features/system-settings/models/model-pricing-snapshots.ts
+index 15a47af..6147a8c 100644
+--- a/web/src/features/system-settings/models/model-pricing-snapshots.ts
++++ b/web/src/features/system-settings/models/model-pricing-snapshots.ts
 @@ -16,7 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
  
  For commercial licensing, please contact support@quantumnous.com
@@ -11,11 +11,11 @@ index 4668f27..5f243e8 100644
 +  parseTiersFromExpr,
 +  splitBillingExprAndRequestRules,
 +} from '@/features/pricing/lib/billing-expr'
- import { safeJsonParse } from '../utils/json-parser'
- import { formatPricingNumber } from './pricing-format'
+ import { splitPluginBillingExprKey } from '@/features/pricing/lib/plugin-pricing'
  
-@@ -66,6 +69,11 @@ const toNumberOrNull = (value?: string) => {
-   return Number.isFinite(num) ? num : null
+ import { safeJsonParse } from '../utils/json-parser'
+@@ -97,13 +100,30 @@ export const getModeVariant = (
+   return 'success'
  }
  
 +const positiveNumberOrNull = (value: unknown) => {
@@ -23,10 +23,9 @@ index 4668f27..5f243e8 100644
 +  return Number.isFinite(num) && num > 0 ? num : null
 +}
 +
- const ratioToPrice = (ratio?: string, denominator?: string) => {
-   const ratioNumber = toNumberOrNull(ratio)
-   const denominatorNumber = denominator ? toNumberOrNull(denominator) : 2
-@@ -93,7 +101,19 @@ const getExpressionSummary = (
+ const getExpressionSummary = (
+   row: ModelPricingSnapshot,
+   t: (key: string) => string
  ) => {
    const tierCount = (row.billingExpr?.match(/tier\(/g) || []).length
    if (tierCount > 0) {

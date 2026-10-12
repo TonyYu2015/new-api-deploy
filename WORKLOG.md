@@ -138,3 +138,78 @@
 - 本轮涉及文件：`custom-new-api/tiered-price-summary.patch`（新增）、
   `custom-new-api/Dockerfile`、`scripts/build-staging-image.sh`；`.env.dev.local` 为被忽略的
   本地覆盖文件，不入库。当日全部本地改动已一并提交到本地 `main`（未推送）。
+
+### 上游大版本升级（rc.15 → rc.43，dev 先行）
+
+上游 rc.15 之后累计 28 个版本：前端将 `web/default` + `web/classic` 合并为单一 `web/`
+并改用 rsbuild 构建，Go 侧引入 `relaykit` / `tokenkit` 本地子模块。经确认采用 dev
+先行方案：重基 4 个补丁、改造 Dockerfile、升级前备份 dev 数据库、构建并部署 dev 验证；
+staging / production 暂不动。
+
+#### 执行内容
+
+1. 升级前备份 dev 数据库：`.local-run/dev-mysql-backup-2026-10-12-pre-rc43.sql.gz`
+   （107969 字节，30 张表，sha256 `7ac148ad…`，gzip 完整性已验证）。rc.43 的数据库
+   迁移为向前迁移，回滚镜像需先用该备份恢复。
+2. 补丁重基（上游固定提交 `c6741c36…`，rc.43）：
+   - `ccai.patch`（1526 行 / 12 文件）：3 个 Go 文件不变；9 个前端文件按 rc.43 新路径
+     （`web/src/…`）重基——profile 页改单列、通知设置仅保留邮件渠道、充值表单去除预设
+     金额并修正 0 值占位显示、Wallet 适配 rc.43 的 `dispatchSelectedPayment` 分发结构、
+     首页 / 导航沿用 CCAI 自定义。
+   - `waffo-pancake-min-topup.patch`：仅路径 `web/default` → `web` 重命名。
+   - `pancake-balance-baseline.patch`（103 行 / 5 hunks）：支付前额度基线改用
+     sessionStorage，兼容新的支付分发结构。
+   - `tiered-price-summary.patch`（48 行）：适配新 import 路径
+     `@/features/pricing/lib/billing-expr`。
+   - 干净 rc.43 检出上按顺序 `git apply --check` / `apply` 全部通过
+     （18 文件，+244 / −838）。
+3. `custom-new-api/Dockerfile` 改造：单前端 rsbuild 构建（`oven/bun:1.4.0`）、
+   Go 1.26.1 + `GOWORK=off` + PGO、版本后缀 `-ccai.1`，`UPSTREAM_COMMIT` /
+   `UPSTREAM_VERSION` 指向 rc.43。首次构建在 `go mod download` 阶段因
+   proxy.golang.org 在本构建网络不可达而失败，已在 builder 阶段加入
+   `GOPROXY=https://goproxy.cn,direct`（Qiniu 镜像 + direct 回退）后构建成功。
+4. 构建 `ccai/new-api:rc43-ccai.1`（镜像 ID `sha256:df8e8a89…`），二进制内确认版本串、
+   `CCAI Service`、pancake 基线存储键、充值文案等自定义标记均已嵌入。
+5. dev 部署：`.env.dev.local` 指向新镜像，仅重建 `new-api` 服务
+   （MySQL / Redis / Caddy 未重建，数据卷不变）；启动日志显示数据库迁移完成、
+   版本 `v1.0.0-rc.43-ccai.1`，无错误。
+
+#### 升级验证结果
+
+- `/api/status` 返回版本 `v1.0.0-rc.43-ccai.1`、`setup: true`；数据库表数 30 → 39。
+- 前端入口包 `index.2032c431d9.js` → `index.e0700110a5.js`；构建产物与 dev 实际服务的
+   该文件字节一致（sha256 前缀 `c8bdf197…`）；编译产物中确认价格摘要补丁代码
+   （`?.inputPrice` / `?.outputPrice` 与 `Input $…`、`Output $…` 拼接）及
+   `<title>CCAI Service</title>`。
+- `/pricing` 路由 200；`/api/pricing` 返回 `pricing is disabled`：经查该消息由
+   `middleware/header_nav.go` 的 `HeaderNavModuleAuth` 按 `options.HeaderNavModules`
+   配置返回（`GET /api/pricing` 注册于 `router/api-router.go`），代码与前端默认均为
+   启用；dev 库 `pricing.enabled=false` 且升级前备份中的值相同（备份内审计日志显示
+   当日 10:38 管理端两次 `option.update`），系升级前已存在的配置，未被本次升级改动；
+   恢复入口为管理端「系统设置 → 顶部导航」。
+- `POST /api/user/waffo-pancake/amount` → 401（路由已注册、要求鉴权）；
+   pancake webhook 与订阅路由均已注册。
+- 未持有管理员凭据，未在管理端页面内逐项点验；浏览器需强刷（Ctrl+F5）加载新前端包。
+
+#### 已知差异与注意事项
+
+- rc.43 已移除 `profile-security-card.tsx`（安全设置改为 features/security 的命名
+   访问令牌卡片），旧补丁对该文件的改动不再适用；现保留 rc.43 原生形态，
+   AccessTokensCard 正常可见。
+- legacy access token 退役机制：rc.43 首次启动记录 `LegacyAccessTokenRetireAt`
+   （首次启动 + 30 天，dev 为 2026-11-11）。到期前
+   `scripts/test-pancake-topup.sh`、`scripts/run-production-creem-test.sh` 使用的
+   `users.access_token` 仍有效（该列仍存在）；到期后需改用命名访问令牌。
+- 启动日志出现 `TRUSTED_PROXIES` 未设置警告（上游默认信任回环 / 内网代理）与
+   `SESSION_COOKIE_SECURE` 未开启警告（本地 HTTP 环境属预期）；
+   生产部署时应设置 `SESSION_COOKIE_SECURE=true`。
+- 回滚提示：rc.43 迁移为向前迁移，仅回退镜像会与升级后的表结构不兼容；
+   如需回滚，先用升级前备份恢复数据库。
+
+#### 升级遗留
+
+- staging（`ccai.8`）/ production（`ccai.4`）未部署；如需推广，先在 staging 构建并
+   按既有流程验证，通过后再更新 `config/production-rollout.md` 基线发布生产。
+- 本轮工作区改动（`custom-new-api/Dockerfile`、4 个补丁、
+   `scripts/build-staging-image.sh`）尚未提交 Git。
+- 建议在浏览器中用管理员账号人工复验管理端「模型价格」页与 Wallet / pancake 回跳。

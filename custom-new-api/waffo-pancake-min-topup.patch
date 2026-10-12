@@ -1,7 +1,7 @@
-diff --git a/web/default/src/features/system-settings/billing/index.tsx b/web/default/src/features/system-settings/billing/index.tsx
+diff --git a/web/src/features/system-settings/billing/index.tsx b/web/src/features/system-settings/billing/index.tsx
 index daad506..6d49537 100644
---- a/web/default/src/features/system-settings/billing/index.tsx
-+++ b/web/default/src/features/system-settings/billing/index.tsx
+--- a/web/src/features/system-settings/billing/index.tsx
++++ b/web/src/features/system-settings/billing/index.tsx
 @@ -100,6 +100,7 @@ const defaultBillingSettings: BillingSettings = {
    WaffoPancakeMerchantID: '',
    WaffoPancakePrivateKey: '',
@@ -10,10 +10,10 @@ index daad506..6d49537 100644
    WaffoPancakeStoreID: '',
    WaffoPancakeProductID: '',
    'checkin_setting.enabled': false,
-diff --git a/web/default/src/features/system-settings/billing/section-registry.tsx b/web/default/src/features/system-settings/billing/section-registry.tsx
+diff --git a/web/src/features/system-settings/billing/section-registry.tsx b/web/src/features/system-settings/billing/section-registry.tsx
 index 1a1dc8a..a7bf21b 100644
---- a/web/default/src/features/system-settings/billing/section-registry.tsx
-+++ b/web/default/src/features/system-settings/billing/section-registry.tsx
+--- a/web/src/features/system-settings/billing/section-registry.tsx
++++ b/web/src/features/system-settings/billing/section-registry.tsx
 @@ -173,6 +173,7 @@ const BILLING_SECTIONS = [
            WaffoPancakeMerchantID: settings.WaffoPancakeMerchantID ?? '',
            WaffoPancakePrivateKey: settings.WaffoPancakePrivateKey ?? '',
@@ -22,10 +22,10 @@ index 1a1dc8a..a7bf21b 100644
          }}
          waffoPancakeProvisionedStoreID={settings.WaffoPancakeStoreID ?? ''}
          waffoPancakeProvisionedProductID={settings.WaffoPancakeProductID ?? ''}
-diff --git a/web/default/src/features/system-settings/integrations/payment-settings-section.tsx b/web/default/src/features/system-settings/integrations/payment-settings-section.tsx
+diff --git a/web/src/features/system-settings/integrations/payment-settings-section.tsx b/web/src/features/system-settings/integrations/payment-settings-section.tsx
 index 915cf64..91eb352 100644
---- a/web/default/src/features/system-settings/integrations/payment-settings-section.tsx
-+++ b/web/default/src/features/system-settings/integrations/payment-settings-section.tsx
+--- a/web/src/features/system-settings/integrations/payment-settings-section.tsx
++++ b/web/src/features/system-settings/integrations/payment-settings-section.tsx
 @@ -174,6 +174,7 @@ const paymentSchema = z.object({
    WaffoPancakeMerchantID: z.string(),
    WaffoPancakePrivateKey: z.string(),
@@ -74,10 +74,10 @@ index 915cf64..91eb352 100644
    }
 
    return (
-diff --git a/web/default/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx b/web/default/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx
+diff --git a/web/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx b/web/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx
 index 82ad963..72fa3e7 100644
---- a/web/default/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx
-+++ b/web/default/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx
+--- a/web/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx
++++ b/web/src/features/system-settings/integrations/waffo-pancake-settings-section.tsx
 @@ -44,6 +44,7 @@ export type WaffoPancakeSettingsValues = {
    WaffoPancakeMerchantID: string
    WaffoPancakePrivateKey: string
@@ -112,10 +112,10 @@ index 82ad963..72fa3e7 100644
          <div className='grid gap-1.5'>
            <Label>{t('API Private Key')}</Label>
            <Textarea
-diff --git a/web/default/src/features/system-settings/types.ts b/web/default/src/features/system-settings/types.ts
+diff --git a/web/src/features/system-settings/types.ts b/web/src/features/system-settings/types.ts
 index 5f6e0c6..7ac49a2 100644
---- a/web/default/src/features/system-settings/types.ts
-+++ b/web/default/src/features/system-settings/types.ts
+--- a/web/src/features/system-settings/types.ts
++++ b/web/src/features/system-settings/types.ts
 @@ -320,6 +320,7 @@ export type BillingSettings = {
    WaffoPancakeMerchantID: string
    WaffoPancakePrivateKey: string
