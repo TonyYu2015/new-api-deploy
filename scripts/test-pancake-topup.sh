@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-ENV_FILE="${ENV_FILE:-.env.development}"
+ENV_FILE="${ENV_FILE:-.env.dev}"
 ORIGIN="${PANCAKE_TEST_BASE_URL:-}"
 TARGET="${PANCAKE_TEST_TARGET:-local}"
 STAGING_HOST="${PANCAKE_STAGING_HOST:-oracle}"
@@ -25,7 +25,7 @@ webhook, order, and UI return in test.ccaiservice.com for full validation.
 
 Options:
   --target TARGET      local or staging (default: local)
-  --env-file FILE      Local Compose env file (default: .env.development)
+  --env-file FILE      Local Compose env file (default: .env.dev)
   --base-url URL       Override the target API origin
   --auth-file FILE     Staging E2E credentials (default: ui-tests/.env.e2e)
   --staging-host HOST  SSH host for staging (default: oracle)
@@ -125,25 +125,38 @@ read_env_from() {
 import sys
 
 key = sys.argv[1]
-with open(sys.argv[2], encoding="utf-8") as handle:
-    for raw_line in handle:
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        name, value = line.split("=", 1)
-        if name.strip() != key:
-            continue
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"\x27":
-            value = value[1:-1]
-        print(value)
-        break
-' "$1" "$2"
+value = ""
+for path in sys.argv[2:]:
+    try:
+        handle = open(path, encoding="utf-8")
+    except FileNotFoundError:
+        continue
+    with handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            name, item = line.split("=", 1)
+            if name.strip() != key:
+                continue
+            item = item.strip()
+            if len(item) >= 2 and item[0] == item[-1] and item[0] in "\"\x27":
+                item = item[1:-1]
+            value = item
+print(value)
+' "$1" "${@:2}"
 }
+
+# shellcheck source=lib/env.sh
+. scripts/lib/env.sh
+
+if [[ "$TARGET" == "local" ]]; then
+  mapfile -t ENV_ARGS < <(env_args "$ENV_FILE")
+fi
 
 if [[ -z "$ORIGIN" ]]; then
   if [[ "$TARGET" == "local" ]]; then
-    HTTP_PORT="$(read_env_from HTTP_PORT "$ENV_FILE")"
+    HTTP_PORT="$(read_env_from HTTP_PORT "$ENV_FILE" "${ENV_FILE}.local")"
     ORIGIN="http://127.0.0.1:${HTTP_PORT:-3101}"
   else
     ORIGIN="$(read_env_from E2E_BASE_URL "$STAGING_AUTH_FILE")"
@@ -157,7 +170,7 @@ if [[ "$TARGET" == "local" ]]; then
     http://127.0.0.1:*|http://localhost:*|https://127.0.0.1:*|https://localhost:*) ;;
     *) echo "Local target requires a localhost API origin" >&2; exit 1 ;;
   esac
-  COMPOSE=(docker compose --env-file "$ENV_FILE")
+  COMPOSE=(docker compose "${ENV_ARGS[@]}")
   ENVIRONMENT_LABEL="local ($ENV_FILE)"
 else
   [[ "$ORIGIN" == "https://test.ccaiservice.com" ]] || {
@@ -166,7 +179,7 @@ else
   }
   STAGING_PATH_Q="$(printf '%q' "$STAGING_PATH")"
   STAGING_ENV_FILE_Q="$(printf '%q' "$STAGING_ENV_FILE")"
-  REMOTE_COMPOSE="cd $STAGING_PATH_Q && sudo docker compose --env-file $STAGING_ENV_FILE_Q"
+  REMOTE_COMPOSE="cd $STAGING_PATH_Q && sudo docker compose --env-file $STAGING_ENV_FILE_Q \$(test -f $STAGING_ENV_FILE_Q.local && printf -- '--env-file %s' $STAGING_ENV_FILE_Q.local)"
   ENVIRONMENT_LABEL="staging ($STAGING_HOST:$STAGING_PATH)"
 fi
 

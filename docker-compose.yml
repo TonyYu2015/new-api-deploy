@@ -16,6 +16,21 @@ services:
       REDIS_CONN_STRING: "redis://:${REDIS_PASSWORD}@redis:6379/0"
       SESSION_SECRET: ${SESSION_SECRET}
       CRYPTO_SECRET: ${CRYPTO_SECRET}
+      GLOBAL_API_RATE_LIMIT_ENABLE: ${GLOBAL_API_RATE_LIMIT_ENABLE:-true}
+      GLOBAL_API_RATE_LIMIT: ${GLOBAL_API_RATE_LIMIT:-120}
+      GLOBAL_API_RATE_LIMIT_DURATION: ${GLOBAL_API_RATE_LIMIT_DURATION:-60}
+      GLOBAL_WEB_RATE_LIMIT_ENABLE: ${GLOBAL_WEB_RATE_LIMIT_ENABLE:-true}
+      GLOBAL_WEB_RATE_LIMIT: ${GLOBAL_WEB_RATE_LIMIT:-60}
+      GLOBAL_WEB_RATE_LIMIT_DURATION: ${GLOBAL_WEB_RATE_LIMIT_DURATION:-60}
+      CRITICAL_RATE_LIMIT_ENABLE: ${CRITICAL_RATE_LIMIT_ENABLE:-true}
+      CRITICAL_RATE_LIMIT: ${CRITICAL_RATE_LIMIT:-10}
+      CRITICAL_RATE_LIMIT_DURATION: ${CRITICAL_RATE_LIMIT_DURATION:-600}
+      RELAY_TIMEOUT: ${RELAY_TIMEOUT:-0}
+      STREAMING_TIMEOUT: ${STREAMING_TIMEOUT:-600}
+      MAX_REQUEST_BODY_MB: ${MAX_REQUEST_BODY_MB:-32}
+      ERROR_LOG_ENABLED: ${ERROR_LOG_ENABLED:-true}
+      CHANNEL_UPDATE_FREQUENCY: ${CHANNEL_UPDATE_FREQUENCY:-60}
+      CHANNEL_TEST_FREQUENCY: ${CHANNEL_TEST_FREQUENCY:-60}
     volumes:
       - ${NEW_API_DATA_DIR:-./data/new-api}:/data
     networks:
@@ -31,7 +46,7 @@ services:
       - "${HTTP_PORT:-3001}:80"
       - "${HTTPS_PORT:-3443}:443"
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${CADDYFILE_PATH:-./caddy/Caddyfile}:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
@@ -44,7 +59,8 @@ services:
     depends_on:
       - new-api
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ${NGINX_CONF_DIR:-./nginx/conf.d}:/etc/nginx/conf.d:ro
+      - ${NGINX_ASSETS_DIR:-./nginx/assets}:/usr/share/nginx/ccai:ro
     networks:
       - new-api-net
 

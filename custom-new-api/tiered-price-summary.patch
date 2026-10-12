@@ -1,0 +1,49 @@
+diff --git a/web/default/src/features/system-settings/models/model-pricing-snapshots.ts b/web/default/src/features/system-settings/models/model-pricing-snapshots.ts
+index 4668f27..5f243e8 100644
+--- a/web/default/src/features/system-settings/models/model-pricing-snapshots.ts
++++ b/web/default/src/features/system-settings/models/model-pricing-snapshots.ts
+@@ -16,7 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
+ 
+ For commercial licensing, please contact support@quantumnous.com
+ */
+-import { splitBillingExprAndRequestRules } from '@/features/pricing/lib/billing-expr'
++import {
++  parseTiersFromExpr,
++  splitBillingExprAndRequestRules,
++} from '@/features/pricing/lib/billing-expr'
+ import { safeJsonParse } from '../utils/json-parser'
+ import { formatPricingNumber } from './pricing-format'
+ 
+@@ -66,6 +69,11 @@ const toNumberOrNull = (value?: string) => {
+   return Number.isFinite(num) ? num : null
+ }
+ 
++const positiveNumberOrNull = (value: unknown) => {
++  const num = Number(value)
++  return Number.isFinite(num) && num > 0 ? num : null
++}
++
+ const ratioToPrice = (ratio?: string, denominator?: string) => {
+   const ratioNumber = toNumberOrNull(ratio)
+   const denominatorNumber = denominator ? toNumberOrNull(denominator) : 2
+@@ -93,7 +101,19 @@ const getExpressionSummary = (
+ ) => {
+   const tierCount = (row.billingExpr?.match(/tier\(/g) || []).length
+   if (tierCount > 0) {
+-    return `${t('Tiered pricing')} · ${tierCount} ${t('tiers')}`
++    // Surface the first tier's token prices so expression-billed models
++    // (e.g. synced from upstream) show concrete numbers at a glance.
++    const baseTier = parseTiersFromExpr(row.billingExpr || '')[0]
++    const parts = [`${t('Tiered pricing')} · ${tierCount} ${t('tiers')}`]
++    const inputPrice = positiveNumberOrNull(baseTier?.inputPrice)
++    const outputPrice = positiveNumberOrNull(baseTier?.outputPrice)
++    if (inputPrice !== null) {
++      parts.push(`${t('Input')} $${formatPricingNumber(inputPrice)}`)
++    }
++    if (outputPrice !== null) {
++      parts.push(`${t('Output')} $${formatPricingNumber(outputPrice)}`)
++    }
++    return parts.join(' · ')
+   }
+   return t('Expression pricing')
+ }

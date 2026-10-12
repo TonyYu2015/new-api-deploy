@@ -1,0 +1,45 @@
+{
+  "source": "Official provider prices, converted at 7.3 CNY/USD with a 1.55 cost multiplier",
+  "models": [
+    {
+      "id": "qwen3.7-max",
+      "description": "Qwen 3.7 Max chat model",
+      "tags": "Qwen,Chat",
+      "input_per_1m": 2.548,
+      "cached_input_per_1m": 0.51,
+      "output_per_1m": 7.644
+    },
+    {
+      "id": "deepseek-v4-flash",
+      "description": "DeepSeek V4 Flash chat model",
+      "tags": "DeepSeek,Chat",
+      "input_per_1m": 0.212,
+      "cached_input_per_1m": 0.0043,
+      "output_per_1m": 0.425
+    },
+    {
+      "id": "deepseek-v4-pro",
+      "description": "DeepSeek V4 Pro chat model",
+      "tags": "DeepSeek,Chat",
+      "input_per_1m": 2.548,
+      "cached_input_per_1m": 0.0212,
+      "output_per_1m": 5.096
+    },
+    {
+      "id": "glm-5.2",
+      "description": "GLM 5.2 chat model",
+      "tags": "GLM,Chat",
+      "input_per_1m": 1.699,
+      "cached_input_per_1m": 0.425,
+      "output_per_1m": 5.945
+    },
+    {
+      "id": "kimi-k2.5",
+      "description": "Kimi K2.5 vision model",
+      "tags": "Kimi,Vision",
+      "input_per_1m": 0.849,
+      "cached_input_per_1m": 0.149,
+      "output_per_1m": 4.459
+    }
+  ]
+}

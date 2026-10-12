@@ -39,6 +39,32 @@ echo "Preparing $DEPLOY_PATH..."
 sudo mkdir -p "$DEPLOY_PATH"
 sudo chown "$(id -un):$(id -gn)" "$DEPLOY_PATH"
 
+# Move legacy secrets out of the tracked env file before it is reset to the
+# committed, secret-free version.
+migrate_legacy_secrets() {
+  local base="$1"
+  local local_file="${base}.local"
+  local key value
+
+  [ -f "$base" ] || return 0
+  [ -f "$local_file" ] && return 0
+
+  umask 077
+  : > "$local_file"
+  chmod 600 "$local_file"
+  for key in SESSION_SECRET CRYPTO_SECRET MYSQL_ROOT_PASSWORD MYSQL_PASSWORD REDIS_PASSWORD; do
+    value="$(sed -n "s/^${key}=//p" "$base" | tail -n 1)"
+    if [ -n "$value" ]; then
+      printf '%s=%s\n' "$key" "$value" >> "$local_file"
+    fi
+  done
+  echo "Migrated secrets from $base to $local_file"
+}
+
+if [ -d "$DEPLOY_PATH/.git" ]; then
+  ( cd "$DEPLOY_PATH" && migrate_legacy_secrets .env.production ) || true
+fi
+
 if [ ! -d "$DEPLOY_PATH/.git" ]; then
   if find "$DEPLOY_PATH" -mindepth 1 -maxdepth 1 | grep -q .; then
     legacy_path="${DEPLOY_PATH}.legacy.$(date +%Y%m%d%H%M%S)"
@@ -57,51 +83,33 @@ fi
 cd "$DEPLOY_PATH"
 
 ENV_FILE=".env.production"
-
 if [ ! -f "$ENV_FILE" ]; then
-  if [ -f .env ]; then
-    cp .env "$ENV_FILE"
-  else
-    cp .env.production.example "$ENV_FILE"
-    ./scripts/gen-secrets.sh "$ENV_FILE"
-  fi
+  echo "Base env file not found: $ENV_FILE" >&2
+  exit 1
 fi
 
-if grep -q '^HTTP_PORT=' "$ENV_FILE"; then
-  sed -i 's/^HTTP_PORT=.*/HTTP_PORT=80/' "$ENV_FILE"
-else
-  echo 'HTTP_PORT=80' >> "$ENV_FILE"
+umask 077
+touch "${ENV_FILE}.local"
+chmod 600 "${ENV_FILE}.local"
+
+if ! grep -q '^MYSQL_PASSWORD=.\+' "${ENV_FILE}.local"; then
+  ./scripts/gen-secrets.sh "$ENV_FILE"
 fi
 
-if grep -q '^HTTPS_PORT=' "$ENV_FILE"; then
-  sed -i 's/^HTTPS_PORT=.*/HTTPS_PORT=443/' "$ENV_FILE"
-else
-  echo 'HTTPS_PORT=443' >> "$ENV_FILE"
+# shellcheck source=lib/env.sh
+. scripts/lib/env.sh
+
+mapfile -t ENV_ARGS < <(env_args "$ENV_FILE")
+
+sudo docker compose "${ENV_ARGS[@]}" pull
+sudo docker compose "${ENV_ARGS[@]}" up -d
+if sudo docker network inspect new-api-staging_new-api-net >/dev/null 2>&1; then
+  sudo docker network connect new-api-staging_new-api-net new-api-nginx 2>/dev/null || true
 fi
-
-set_env_default() {
-  local key="$1"
-  local value="$2"
-  if ! grep -q "^${key}=" "$ENV_FILE"; then
-    echo "${key}=${value}" >> "$ENV_FILE"
-  fi
-}
-
-set_env_default CADDY_IMAGE caddy:2.8-alpine
-set_env_default NGINX_IMAGE nginx:1.27-alpine
-set_env_default COMPOSE_PROJECT_NAME new-api-deploy
-set_env_default APP_CONTAINER_NAME new-api
-set_env_default CADDY_CONTAINER_NAME new-api-nginx
-set_env_default HTML_FILTER_CONTAINER_NAME new-api-html-filter
-set_env_default MYSQL_CONTAINER_NAME new-api-mysql
-set_env_default REDIS_CONTAINER_NAME new-api-redis
-set_env_default NEW_API_DATA_DIR ./data/new-api
-set_env_default MYSQL_DATA_DIR ./data/mysql
-set_env_default REDIS_DATA_DIR ./data/redis
-
-sudo docker compose --env-file "$ENV_FILE" pull
-sudo docker compose --env-file "$ENV_FILE" up -d
-sudo docker compose --env-file "$ENV_FILE" ps
+if [ -x scripts/sync-gateway-safeguards.sh ]; then
+  ./scripts/sync-gateway-safeguards.sh "$ENV_FILE"
+fi
+sudo docker compose "${ENV_ARGS[@]}" ps
 REMOTE
 
 echo "Oracle deployment finished."

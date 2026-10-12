@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-ENV_FILE="${ENV_FILE:-.env.development}"
+ENV_FILE="${ENV_FILE:-.env.dev}"
 ORIGIN="${EMAIL_TEST_BASE_URL:-}"
 PREFLIGHT_ONLY=false
 REPORT_DIR="${EMAIL_TEST_REPORT_DIR:-.local-run}"
@@ -20,7 +20,7 @@ If the email belongs to an existing ordinary test user whose username starts
 with e2e_, the command can remove that user after explicit confirmation.
 
 Options:
-  --env-file FILE      Compose environment file (default: .env.development)
+  --env-file FILE      Compose environment file (default: .env.dev)
   --base-url URL       Local HTTP origin (default: HTTP_PORT from env file)
   --preflight-only     Check services and configuration without sending email
   -h, --help           Show this help
@@ -60,6 +60,11 @@ done
 
 [[ -f "$ENV_FILE" ]] || { echo "Environment file not found: $ENV_FILE" >&2; exit 1; }
 
+# shellcheck source=lib/env.sh
+. scripts/lib/env.sh
+
+mapfile -t ENV_ARGS < <(env_args "$ENV_FILE")
+
 for command_name in curl docker grep openssl python3; do
   command -v "$command_name" >/dev/null 2>&1 || {
     echo "$command_name is required" >&2
@@ -77,20 +82,26 @@ read_env() {
 import sys
 
 key = sys.argv[1]
-with open(sys.argv[2], encoding="utf-8") as handle:
-    for raw_line in handle:
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        name, value = line.split("=", 1)
-        if name.strip() != key:
-            continue
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"\x27":
-            value = value[1:-1]
-        print(value)
-        break
-' "$1" "$ENV_FILE"
+value = ""
+for path in sys.argv[2:]:
+    try:
+        handle = open(path, encoding="utf-8")
+    except FileNotFoundError:
+        continue
+    with handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            name, item = line.split("=", 1)
+            if name.strip() != key:
+                continue
+            item = item.strip()
+            if len(item) >= 2 and item[0] == item[-1] and item[0] in "\"\x27":
+                item = item[1:-1]
+            value = item
+print(value)
+' "$1" "$ENV_FILE" "${ENV_FILE}.local"
 }
 
 if [[ -z "$ORIGIN" ]]; then
@@ -110,7 +121,7 @@ case "$ORIGIN" in
     ;;
 esac
 
-COMPOSE=(docker compose --env-file "$ENV_FILE")
+COMPOSE=(docker compose "${ENV_ARGS[@]}")
 RUN_ID="$(date '+%Y%m%d-%H%M%S')"
 RUN_STARTED_AT="$(date --iso-8601=seconds)"
 TMP_DIR="$(mktemp -d)"
