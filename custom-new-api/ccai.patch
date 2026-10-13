@@ -57,29 +57,6 @@ index d097f46..3c233fc 100644
      <meta
        name="description"
        content="Unified AI API gateway and admin dashboard."
-diff --git a/web/src/components/layout/components/public-header.tsx b/web/src/components/layout/components/public-header.tsx
-index dd4b0b0..e229dd1 100644
---- a/web/src/components/layout/components/public-header.tsx
-+++ b/web/src/components/layout/components/public-header.tsx
-@@ -64,7 +64,7 @@ export interface PublicHeaderProps {
- 
- export function PublicHeader(props: PublicHeaderProps) {
-   const {
--    navLinks = defaultTopNavLinks,
-+    navLinks,
-     showThemeSwitch = true,
-     showLanguageSwitcher = true,
-     logo: customLogo,
-@@ -97,7 +97,8 @@ export function PublicHeader(props: PublicHeaderProps) {
-   const user = auth.user
-   const isAuthenticated = !!user
-   const displaySiteName = customSiteName || systemName
--  const links = dynamicLinks.length > 0 ? dynamicLinks : navLinks
-+  const links =
-+    navLinks ?? (dynamicLinks.length > 0 ? dynamicLinks : defaultTopNavLinks)
- 
-   let logoContent: ReactNode = (
-     <HeaderLogo
 diff --git a/web/src/features/home/components/sections/hero.tsx b/web/src/features/home/components/sections/hero.tsx
 index 4a08151..1597e2e 100644
 --- a/web/src/features/home/components/sections/hero.tsx
@@ -306,118 +283,26 @@ index 4a08151..1597e2e 100644
  
          {/* Right Column: Hero Terminal API Demo */}
 diff --git a/web/src/features/home/index.tsx b/web/src/features/home/index.tsx
-index c157d35..bde14b5 100644
+index c157d35..1c1614e 100644
 --- a/web/src/features/home/index.tsx
 +++ b/web/src/features/home/index.tsx
-@@ -16,118 +16,28 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
- 
- For commercial licensing, please contact support@quantumnous.com
- */
--import { useCallback, useEffect, useRef } from 'react'
+@@ -20,13 +20,12 @@ import { useCallback, useEffect, useRef } from 'react'
  import { useTranslation } from 'react-i18next'
  
  import { PublicLayout } from '@/components/layout'
 -import { Footer } from '@/components/layout/components/footer'
--import { RichContent } from '@/components/rich-content'
--import { useTheme } from '@/context/theme-provider'
--import { isLikelyHtml } from '@/lib/content-format'
+ import { RichContent } from '@/components/rich-content'
+ import { useTheme } from '@/context/theme-provider'
+ import { isLikelyHtml } from '@/lib/content-format'
  import { useAuthStore } from '@/stores/auth-store'
  
 -import { CTA, Features, Hero, HowItWorks, Stats } from './components'
--import { useHomePageContent } from './hooks'
 +import { Hero } from './components'
+ import { useHomePageContent } from './hooks'
  
  export function Home() {
--  const { i18n, t } = useTranslation()
--  const iframeRef = useRef<HTMLIFrameElement>(null)
--  const { resolvedTheme } = useTheme()
-+  const { t } = useTranslation()
-   const { auth } = useAuthStore()
-   const isAuthenticated = !!auth.user
--  const { content, isLoaded, isUrl } = useHomePageContent()
--
--  const syncIframePreferences = useCallback(() => {
--    try {
--      iframeRef.current?.contentWindow?.postMessage(
--        { themeMode: resolvedTheme },
--        '*'
--      )
--      iframeRef.current?.contentWindow?.postMessage(
--        { lang: i18n.language },
--        '*'
--      )
--    } catch {
--      // Cross-origin frames may reject access while navigating.
--    }
--  }, [i18n.language, resolvedTheme])
--
--  useEffect(() => {
--    if (isUrl) {
--      syncIframePreferences()
--    }
--  }, [isUrl, syncIframePreferences])
--
--  if (!isLoaded) {
--    return (
--      <PublicLayout showMainContainer={false}>
--        <main className='flex min-h-screen items-center justify-center'>
--          <div className='text-muted-foreground'>{t('Loading...')}</div>
--        </main>
--      </PublicLayout>
--    )
--  }
--
--  if (content) {
--    if (isUrl) {
--      return (
--        <PublicLayout showMainContainer={false}>
--          {/*
--            allow-top-navigation-by-user-activation: the custom home page URL is
--            admin-configured (trusted); this lets its target="_top" nav/menu links
--            navigate the top-level window on user click. The default sandbox blocks
--            this on desktop, while some mobile browsers allow it via allow-popups,
--            causing inconsistent behavior. This token only permits user-activated
--            top-level navigation and does NOT grant same-origin access.
--          */}
--          <iframe
--            ref={iframeRef}
--            src={content}
--            className='h-screen w-full border-none'
--            title={t('Custom Home Page')}
--            sandbox='allow-forms allow-popups allow-popups-to-escape-sandbox allow-scripts allow-top-navigation-by-user-activation'
--            onLoad={syncIframePreferences}
--          />
--        </PublicLayout>
--      )
--    }
--
--    const contentIsHtml = isLikelyHtml(content)
--
--    if (contentIsHtml) {
--      return (
--        <PublicLayout showMainContainer={false}>
--          <RichContent
--            mode='html'
--            htmlVariant='isolated'
--            content={content}
--            className='custom-home-content'
--          />
--        </PublicLayout>
--      )
--    }
--
--    return (
--      <PublicLayout>
--        <div className='mx-auto max-w-6xl px-4 py-8'>
--          <RichContent
--            mode='markdown'
--            content={content}
--            className='custom-home-content'
--          />
--        </div>
--      </PublicLayout>
--    )
--  }
+@@ -121,13 +120,15 @@ export function Home() {
+   }
  
    return (
 -    <PublicLayout showMainContainer={false}>
