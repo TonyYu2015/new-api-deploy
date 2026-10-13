@@ -206,10 +206,27 @@ staging / production 暂不动。
 - 回滚提示：rc.43 迁移为向前迁移，仅回退镜像会与升级后的表结构不兼容；
    如需回滚，先用升级前备份恢复数据库。
 
+#### staging 部署（2026-10-12）
+
+- 本地提交 `c55752c`（rc.43 升级）并推送到 `origin/main`；staging 服务器代码更新
+   到同一提交。
+- 升级前备份 staging 数据库：
+   `/opt/new-api-deploy/backups/staging-rc15-db-20261012-134549.sql.gz`
+   （752 KB，gzip 校验通过，29 张表）。
+- 服务器构建 `ccai/new-api:rc43-ccai.1`
+   （`sha256:c4d4b130c5d70d1eb298a8393d306956a61d7aa96571165ea97e44910301bb33`）；
+   首次构建在 `go mod download` 阶段因 `goproxy.cn` 返回 `GOAWAY` 失败，重试成功。
+- 部署后内网 3002 与公开 `test.ccaiservice.com` 的 `/api/status` 均为
+   `v1.0.0-rc.43-ccai.1`，首页 HTTP 200，日志无 `fatal`/`panic`/error；迁移后
+   users=12、channels=5、tokens=1、top_ups=19、options=72。
+- 故障与修复：`new-api` 重建换了 IP 后，html-filter 的 nginx 仍缓存旧地址导致
+   502；已在 `deploy-staging.sh` / `deploy-oracle.sh` 中加入部署后强制重建
+   `html-filter` 与 `nginx`。
+- `config/production-rollout.md` 的 staging 基线已更新为 `rc43-ccai.1`。
+
 #### 升级遗留
 
-- staging（`ccai.8`）/ production（`ccai.4`）未部署；如需推广，先在 staging 构建并
-   按既有流程验证，通过后再更新 `config/production-rollout.md` 基线发布生产。
-- 本轮工作区改动（`custom-new-api/Dockerfile`、4 个补丁、
-   `scripts/build-staging-image.sh`）尚未提交 Git。
+- production 仍为 `rc15-ccai.4`，未部署；rc.43 迁移为向前迁移，回滚需先用备份恢复
+   数据库，推广生产前需按 `config/production-rollout.md` 流程执行。
+- 完整桌面/移动端 UI 回归、模型转发与 Pancake 支付需在 `rc43-ccai.1` 上重新验收。
 - 建议在浏览器中用管理员账号人工复验管理端「模型价格」页与 Wallet / pancake 回跳。

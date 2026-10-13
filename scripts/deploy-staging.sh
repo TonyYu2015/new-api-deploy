@@ -85,6 +85,12 @@ else
 fi
 sudo docker compose "${ENV_ARGS[@]}" up -d
 
+# The html-filter nginx resolves the "new-api" upstream only when it starts,
+# and Caddy resolves "html-filter" the same way. When the app container is
+# recreated with a new IP both proxies keep the stale address and the site
+# returns 502 until they restart, so recreate the proxy tier after the app.
+sudo docker compose "${ENV_ARGS[@]}" up -d --force-recreate html-filter nginx
+
 if sudo docker inspect new-api-nginx >/dev/null 2>&1; then
   sudo docker network connect new-api-staging_new-api-net new-api-nginx 2>/dev/null || true
 fi

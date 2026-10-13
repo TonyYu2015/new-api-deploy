@@ -103,6 +103,12 @@ mapfile -t ENV_ARGS < <(env_args "$ENV_FILE")
 
 sudo docker compose "${ENV_ARGS[@]}" pull
 sudo docker compose "${ENV_ARGS[@]}" up -d
+
+# Same stale-DNS hazard as staging: the html-filter nginx caches the
+# "new-api" upstream address and Caddy caches "html-filter", so recreate the
+# proxy tier after the app container has been replaced.
+sudo docker compose "${ENV_ARGS[@]}" up -d --force-recreate html-filter nginx
+
 if sudo docker network inspect new-api-staging_new-api-net >/dev/null 2>&1; then
   sudo docker network connect new-api-staging_new-api-net new-api-nginx 2>/dev/null || true
 fi

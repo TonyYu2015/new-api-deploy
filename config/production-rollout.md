@@ -1,10 +1,10 @@
 # Production Rollout Register
 
-Last updated: 2026-07-29
+Last updated: 2026-10-12
 
-Latest environment verification: 2026-07-23. Production was not re-queried
-during that verification, so its row below is the latest recorded production
-state rather than a fresh runtime check.
+Latest environment verification: 2026-10-12 (staging upgraded to
+`rc43-ccai.1`). Production was not re-queried, so its row below is the latest
+recorded production state rather than a fresh runtime check.
 
 This file is the source of truth for changes validated in staging that must
 later be promoted to production. Update the status and verification notes for
@@ -19,7 +19,7 @@ evidence.
 | Environment | URL | New API image | Verified |
 |---|---|---|---|
 | Production | https://www.ccaiservice.com | `ccai/new-api:rc15-ccai.4` (`sha256:30aa44e51a97dc9e76ae5e2ec64612197f520adc6272ebc1dc82bd0ad4624a1e`) | 2026-07-02 |
-| Staging | https://test.ccaiservice.com | `ccai/new-api:rc15-ccai.8` (`sha256:877cf60757072a3f69f04b1d7941c8aa38c15eb9d2dc143e9e3efa0b946cc8f1`) | 2026-07-23 |
+| Staging | https://test.ccaiservice.com | `ccai/new-api:rc43-ccai.1` (`sha256:c4d4b130c5d70d1eb298a8393d306956a61d7aa96571165ea97e44910301bb33`) | 2026-10-12 |
 
 Do not replace either digest with `latest`. A version change must be tested in
 staging and recorded here before production is changed.
@@ -75,11 +75,17 @@ rollout.
 | ID | Change | Staging | Production |
 |---|---|---|---|
 | PAYMENT-007 | Persist the checkout-time quota baseline across the hosted payment redirect so Wallet does not mistake a stale cached balance refresh for the current credit | Validated on `ccai.8` | Pending |
+| PLATFORM-001 | Upgrade New API from `rc.15` to `rc.43`: rebase the four custom patches onto upstream `c6741c36`, rebuild `custom-new-api/Dockerfile` for the merged single-frontend (rsbuild) layout and the `relaykit` / `tokenkit` submodules | Validated on `rc43-ccai.1` | Pending |
 
 `PAYMENT-007` passed a complete staging sandbox payment on 2026-07-23. The
 order moved from `pending` to `success`, quota increased by 5,000,000, Wallet
 displayed `$150`, and both `payment_return` and the stored baseline were
 cleared. This validation does not authorize or imply a production deployment.
+
+`PLATFORM-001` was deployed to staging on 2026-10-12 with a verified
+pre-upgrade database backup. The rc.43 schema migration is forward-only, so a
+production promotion must back up the production database first, and any
+rollback must restore that backup before running an older image.
 
 ## Production Rollout Procedure
 
@@ -110,6 +116,25 @@ Automated coverage for these checks lives in `ui-tests/`. Run both desktop and
 mobile Playwright projects against staging before promoting any pending row.
 
 ## Staging Validation
+
+### 2026-10-12: rc43-ccai.1
+
+- Staging `/api/status` reported `v1.0.0-rc.43-ccai.1` on both the internal
+  port and the public hostname.
+- The staging image ID was
+  `sha256:c4d4b130c5d70d1eb298a8393d306956a61d7aa96571165ea97e44910301bb33`.
+- Pre-upgrade database backup:
+  `/opt/new-api-deploy/backups/staging-rc15-db-20261012-134549.sql.gz`
+  (752 KB, gzip verified, 29 tables). The rc.43 migration is forward-only, so
+  rolling the image back alone is not sufficient.
+- `new-api`, `mysql` and `redis` were recreated with the existing data volumes
+  preserved; the proxy tier (`html-filter`, `nginx`) was recreated to clear a
+  stale upstream DNS cache that returned 502 after the app IP changed.
+- Row counts after migration: users=12, channels=5, tokens=1, top_ups=19,
+  options=72. The homepage returned HTTP 200 and the application log had no
+  `fatal`, `panic` or `error` entries.
+- Comprehensive desktop and mobile UI regression, model relay and Pancake
+  payment re-validation remain pending on this build.
 
 ### 2026-07-23: ccai.8
 
@@ -152,6 +177,13 @@ For staging `ccai.8`, the previous `ccai.7` image
 and the deployment backup at
 `/opt/new-api-deploy/backups/ccai8-deploy-20260723-stage3` were retained.
 
+For the 2026-10-12 staging upgrade to `rc43-ccai.1`, the previous
+`ccai/new-api:rc15-ccai.8`
+(`sha256:877cf60757072a3f69f04b1d7941c8aa38c15eb9d2dc143e9e3efa0b946cc8f1`)
+image remains on the host. Because the rc.43 schema migration is forward-only,
+a rollback must first restore
+`/opt/new-api-deploy/backups/staging-rc15-db-20261012-134549.sql.gz`.
+
 ## Rollout History
 
 | Date | IDs | Result | Notes |
@@ -161,3 +193,4 @@ and the deployment backup at
 | 2026-07-02 | PAYMENT-005 | Applied | Wallet post-payment balance refresh deployed as ccai.3. See `config/releases/2026-07-02-pancake-balance-refresh.md`. |
 | 2026-07-02 | PAYMENT-006 | Applied | Removed the 30-second polling limit in ccai.4. See `config/releases/2026-07-02-pancake-wait-until-credited.md`. |
 | 2026-07-23 | PAYMENT-007 | Staging validated | Complete Pancake sandbox payment and Wallet return verification passed on ccai.8; production remains pending. |
+| 2026-10-12 | PLATFORM-001 | Staging validated | Upgraded staging to `rc43-ccai.1` after a verified pre-upgrade database backup; production remains on `rc15-ccai.4`. |
