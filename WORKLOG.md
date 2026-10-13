@@ -224,9 +224,27 @@ staging / production 暂不动。
    `html-filter` 与 `nginx`。
 - `config/production-rollout.md` 的 staging 基线已更新为 `rc43-ccai.1`。
 
+#### 补丁冲突修正与 ccai.2 部署（2026-10-13）
+
+- 对 4 个补丁与上游 rc.43 做冲突审查，恢复两处被补丁覆盖的上游能力：
+  `home/index.tsx` 的 **Custom Home Page** 分支，以及 `public-header.tsx` 的
+  上游实现（管理端动态导航优先）；其余移除保持为文档化的有意精简。提交
+  `d7b10ff`，并把补丁功能写入 `custom-new-api/README.md`。
+- 版本升级到 `rc43-ccai.2` 并重建（提交 `7f9fbb0`）：dev 先行部署验证，
+  构建产物已包含恢复的 Custom Home Page 分支。
+- staging 部署：先备份数据库
+  `/opt/new-api-deploy/backups/staging-ccai1-db-20261013-030946.sql.gz`
+  （765 KB，gzip 校验通过），再在服务器构建 `ccai/new-api:rc43-ccai.2`
+  （`sha256:586d942b5e5d2e90a3990efc260302c909c06d5887c5fcce921bab42c2d02ca2`）。
+- 部署后内网 3002 与公开 `test.ccaiservice.com` 的 `/api/status` 均为
+  `v1.0.0-rc.43-ccai.2`，首页 HTTP 200，日志无 `fatal`/`panic`/error；
+  users=13、channels=5、tokens=1、top_ups=20、options=75。
+- 代理层 `html-filter`/`nginx` 由部署脚本按预期强制重建，未再出现 502。
+- `config/production-rollout.md` 的 staging 基线更新为 `rc43-ccai.2`。
+
 #### 升级遗留
 
 - production 仍为 `rc15-ccai.4`，未部署；rc.43 迁移为向前迁移，回滚需先用备份恢复
    数据库，推广生产前需按 `config/production-rollout.md` 流程执行。
-- 完整桌面/移动端 UI 回归、模型转发与 Pancake 支付需在 `rc43-ccai.1` 上重新验收。
+- 完整桌面/移动端 UI 回归、模型转发与 Pancake 支付需在 `rc43-ccai.2` 上重新验收。
 - 建议在浏览器中用管理员账号人工复验管理端「模型价格」页与 Wallet / pancake 回跳。

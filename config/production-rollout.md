@@ -1,9 +1,9 @@
 # Production Rollout Register
 
-Last updated: 2026-10-12
+Last updated: 2026-10-13
 
-Latest environment verification: 2026-10-12 (staging upgraded to
-`rc43-ccai.1`). Production was not re-queried, so its row below is the latest
+Latest environment verification: 2026-10-13 (staging upgraded to
+`rc43-ccai.2`). Production was not re-queried, so its row below is the latest
 recorded production state rather than a fresh runtime check.
 
 This file is the source of truth for changes validated in staging that must
@@ -19,7 +19,7 @@ evidence.
 | Environment | URL | New API image | Verified |
 |---|---|---|---|
 | Production | https://www.ccaiservice.com | `ccai/new-api:rc15-ccai.4` (`sha256:30aa44e51a97dc9e76ae5e2ec64612197f520adc6272ebc1dc82bd0ad4624a1e`) | 2026-07-02 |
-| Staging | https://test.ccaiservice.com | `ccai/new-api:rc43-ccai.1` (`sha256:c4d4b130c5d70d1eb298a8393d306956a61d7aa96571165ea97e44910301bb33`) | 2026-10-12 |
+| Staging | https://test.ccaiservice.com | `ccai/new-api:rc43-ccai.2` (`sha256:586d942b5e5d2e90a3990efc260302c909c06d5887c5fcce921bab42c2d02ca2`) | 2026-10-13 |
 
 Do not replace either digest with `latest`. A version change must be tested in
 staging and recorded here before production is changed.
@@ -117,6 +117,30 @@ mobile Playwright projects against staging before promoting any pending row.
 
 ## Staging Validation
 
+### 2026-10-13: rc43-ccai.2
+
+- Conflict review of the custom patches against upstream rc.43 restored two
+  upstream capabilities that the patches had replaced:
+  the admin-configurable **Custom Home Page** branch in
+  `web/src/features/home/index.tsx`, and the upstream implementation of
+  `web/src/components/layout/components/public-header.tsx`, so
+  admin-configured dynamic navigation links keep precedence.
+- All four patches are documented in `custom-new-api/README.md`.
+- Staging `/api/status` reported `v1.0.0-rc.43-ccai.2` on both the internal
+  port and the public hostname; the homepage returned HTTP 200 and the served
+  bundle contains the restored Custom Home Page branch.
+- The staging image ID was
+  `sha256:586d942b5e5d2e90a3990efc260302c909c06d5887c5fcce921bab42c2d02ca2`.
+- Pre-deploy database backup:
+  `/opt/new-api-deploy/backups/staging-ccai1-db-20261013-030946.sql.gz`
+  (765 KB, gzip verified).
+- The deploy recreated the proxy tier (`html-filter`, `nginx`) after the app
+  container, as intended by the deploy-script fix; no 502 was observed.
+- Row counts after deploy: users=13, channels=5, tokens=1, top_ups=20,
+  options=75. No `fatal`, `panic` or `error` entries in the application log.
+- Comprehensive desktop and mobile UI regression, model relay and Pancake
+  payment re-validation remain pending on this build.
+
 ### 2026-10-12: rc43-ccai.1
 
 - Staging `/api/status` reported `v1.0.0-rc.43-ccai.1` on both the internal
@@ -194,3 +218,4 @@ a rollback must first restore
 | 2026-07-02 | PAYMENT-006 | Applied | Removed the 30-second polling limit in ccai.4. See `config/releases/2026-07-02-pancake-wait-until-credited.md`. |
 | 2026-07-23 | PAYMENT-007 | Staging validated | Complete Pancake sandbox payment and Wallet return verification passed on ccai.8; production remains pending. |
 | 2026-10-12 | PLATFORM-001 | Staging validated | Upgraded staging to `rc43-ccai.1` after a verified pre-upgrade database backup; production remains on `rc15-ccai.4`. |
+| 2026-10-13 | PLATFORM-001 | Staging validated | Rebuilt as `rc43-ccai.2` after restoring the upstream Custom Home Page and navigation behaviour; staging re-verified. |
