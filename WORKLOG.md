@@ -273,6 +273,41 @@ staging / production 暂不动。
    `/opt/new-api-deploy/backups/prod-paymethods-20261013.txt`，未改动任何支付凭据、webhook
    或下单逻辑。
 
+#### 页脚与法律条款入口修复（2026-10-13，rc43-ccai.3）
+
+- 用户反馈「服务条款与隐私条款没有独立在用户页面显示出来」。核查结论：条款内容
+   （`legal.user_agreement` / `legal.privacy_policy`）、公开接口
+   （`GET /api/user-agreement`、`GET /api/privacy-policy`）与路由
+   （`/user-agreement`、`/privacy-policy`）都正常且已启用，缺的是**入口**。
+- 根因：上游只在站点 `Footer` 组件里渲染 `LegalLinks`（User Agreement / Privacy
+   Policy），而 `<Footer />` 仅被首页引用；`ccai.patch` 早前把首页那处 `<Footer />`
+   换成了 CCAI 极简页脚，于是法律条款入口和管理员在「系统设置 → 站点 → 页脚」配置的
+   `footer_html`（含 support 邮箱）在全站都不再渲染。
+- 补丁修正（`custom-new-api/ccai.patch`）：
+   - `web/src/components/layout/components/footer.tsx` 导出上游的 `LegalLinks`；
+   - `web/src/components/layout/components/public-layout.tsx` 统一渲染公共页脚
+     （有 `footer_html` 时渲染配置内容，否则回退 CCAI 版权行，后接 `LegalLinks`）；
+   - `web/src/features/home/index.tsx` 移除 CCAI 首页自带的重复页脚。
+  这样首页、定价页、两个法律文档页都会显示条款/隐私入口与配置的页脚内容。
+- 版本提升到 `rc43-ccai.3`（`custom-new-api/Dockerfile`、`scripts/build-staging-image.sh`），
+  补丁在干净上游检出上按顺序 `patch -p1` 全部通过（13 个文件）。
+- dev 验证：构建本地镜像并在 dev 部署，dev 之前没有同步过法律文档与页脚，先用
+  `scripts/sync-legal-docs.sh .env.dev`、`scripts/sync-site-footer.sh .env.dev` 补齐；
+  用 Playwright（chromium，本地脚本，不依赖登录）打开 `/`、`/pricing`、
+  `/user-agreement`、`/privacy-policy`，四个页面均存在指向条款与隐私的链接，
+  首页页脚为「© 2026 CCAI Service  Customer support: support@ccaiservice.com ·
+  User Agreement · Privacy Policy」，两个法律页正常渲染 CCAI 文档正文；
+  截图保存在 `.local-run/footer-dev.png`（被 Git 忽略）。
+- 提交 `1485717`（补丁 + Dockerfile + README + 构建脚本 + `.env.staging`）并推送。
+- staging 部署：升级前备份
+  `/opt/new-api-deploy/backups/staging-ccai2-db-20261013-054932.sql.gz`
+  （764,840 字节，gzip 校验通过）；服务器构建 `ccai/new-api:rc43-ccai.3`
+  （`sha256:c980a454e0f0a256f5deac46e4619309595bf9beb86ef24a7226d074a15385bf`）；
+  部署后内网 3002 与公开 `test.ccaiservice.com` 的 `/api/status` 均为
+  `v1.0.0-rc.43-ccai.3`，日志无 `fatal`/`panic`/error；浏览器复验四个公开页面
+  全部显示条款/隐私入口与配置页脚。
+- 本轮改动仅前端，回滚只需把镜像退回 `rc43-ccai.2`，不需要恢复数据库。
+
 #### 升级遗留
 
 - production 已升级到 `rc43-ccai.2`；rc.43 迁移为向前迁移，回滚需先用
