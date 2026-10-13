@@ -3,7 +3,7 @@
 Last updated: 2026-10-13
 
 Latest environment verification: 2026-10-13. Both staging and production were
-queried on that date; both report `v1.0.0-rc.43-ccai.2`.
+queried on that date; both report `v1.0.0-rc.43-ccai.3`.
 
 This file is the source of truth for changes validated in staging that must
 later be promoted to production. Update the status and verification notes for
@@ -17,7 +17,7 @@ evidence.
 
 | Environment | URL | New API image | Verified |
 |---|---|---|---|
-| Production | https://www.ccaiservice.com | `ccai/new-api:rc43-ccai.2` (`sha256:586d942b5e5d2e90a3990efc260302c909c06d5887c5fcce921bab42c2d02ca2`) | 2026-10-13 |
+| Production | https://www.ccaiservice.com | `ccai/new-api:rc43-ccai.3` (`sha256:c980a454e0f0a256f5deac46e4619309595bf9beb86ef24a7226d074a15385bf`) | 2026-10-13 |
 | Staging | https://test.ccaiservice.com | `ccai/new-api:rc43-ccai.3` (`sha256:c980a454e0f0a256f5deac46e4619309595bf9beb86ef24a7226d074a15385bf`) | 2026-10-13 |
 
 Do not replace either digest with `latest`. A version change must be tested in
@@ -45,7 +45,7 @@ All UI-WALLET/UI-PROFILE entries below were deployed to production on
 | UI-PROFILE-009 | `/profile` | Hide Two-Factor Authentication | Deployed | Applied |
 | UI-PROFILE-010 | `/profile` | Reflow the remaining profile content to one responsive column | Deployed | Applied |
 | UI-PROFILE-011 | `/profile` | Hide the Check-in Calendar card | Deployed | Applied |
-| UI-SITE-001 | Public footer (home, pricing, legal pages) | Keep the operator-configured footer HTML and the User Agreement / Privacy Policy links reachable on every public page; the CCAI home no longer renders a footer of its own | Validated on `rc43-ccai.3` | Pending |
+| UI-SITE-001 | Public footer (home, pricing, legal pages) | Keep the operator-configured footer HTML and the User Agreement / Privacy Policy links reachable on every public page; the CCAI home no longer renders a footer of its own | Validated on `rc43-ccai.3` | Applied 2026-10-13 |
 
 Current staging implementation is built by `custom-new-api/Dockerfile` from
 `custom-new-api/ccai.patch`, `custom-new-api/waffo-pancake-min-topup.patch`,
@@ -239,6 +239,32 @@ Validated on 2026-07-02 with the Tony staging account:
 
 ## Production Validation
 
+### 2026-10-13: production rc43-ccai.3
+
+- Promoted `ccai/new-api:rc43-ccai.3` to production after the staging validation
+  above. The change is frontend-only (public footer) and carries no schema
+  migration.
+- Pre-rollout database backup:
+  `/opt/new-api-deploy/backups/prod-ccai2-db-20261013-055232.sql.gz`
+  (828 KB, gzip verified), plus the `html-filter` configuration
+  `backups/prod-html-filter-20261013-055232.conf`.
+- Production built the same image ID as staging,
+  `sha256:c980a454e0f0a256f5deac46e4619309595bf9beb86ef24a7226d074a15385bf`; the
+  `new-api` container was recreated and the proxy tier (`html-filter`, `nginx`)
+  was force-recreated to clear cached upstream DNS.
+- Internal port 80 and `https://www.ccaiservice.com/api/status` both report
+  `v1.0.0-rc.43-ccai.3`; the application log has no `fatal`, `panic` or `error`
+  entries.
+- Data after rollout: users=54, channels=5, tokens=27, top_ups=9, logs=12395,
+  options=71.
+- Browser verification: `/`, `/pricing`, `/user-agreement` and
+  `/privacy-policy` all render a footer containing `User Agreement` and
+  `Privacy Policy` next to `© 2026 CCAI Service · Customer support:
+  support@ccaiservice.com`, and both legal pages render the configured CCAI
+  documents.
+- Rollback: redeploy `ccai/new-api:rc43-ccai.2`; this frontend-only change needs
+  no database restore.
+
 ### 2026-10-13: production rc43-ccai.2
 
 - Promoted `ccai/new-api:rc43-ccai.2` to production (previously `rc15-ccai.4`)
@@ -299,3 +325,4 @@ a rollback must first restore
 | 2026-10-13 | PAYMENT-007 | Applied | Included in the production `rc43-ccai.2` rollout; a production payment was not re-run on this build. |
 | 2026-10-13 | PAYMENT-003, PAYMENT-008 | Applied | Reverted the production-only payment-method label so production matches staging and dev; previous value backed up under `/opt/new-api-deploy/backups/`. |
 | 2026-10-13 | UI-SITE-001 | Staging validated | Public footer restored with the legal-document links and the configured footer HTML; validated in a browser on all four public pages as `rc43-ccai.3`. |
+| 2026-10-13 | UI-SITE-001 | Applied | Promoted `rc43-ccai.3` to production after a verified database backup; the public footer links and configured footer HTML were re-verified in a browser. |

@@ -306,12 +306,26 @@ staging / production 暂不动。
   部署后内网 3002 与公开 `test.ccaiservice.com` 的 `/api/status` 均为
   `v1.0.0-rc.43-ccai.3`，日志无 `fatal`/`panic`/error；浏览器复验四个公开页面
   全部显示条款/隐私入口与配置页脚。
+- production 部署：提交 `1016d0b` 把 `.env.production` 指向 `rc43-ccai.3` 并推送，
+   升级前备份 `/opt/new-api-deploy/backups/prod-ccai2-db-20261013-055232.sql.gz`
+   （828,166 字节，gzip 校验通过）与 `prod-html-filter-20261013-055232.conf`，
+   再由 `deploy-oracle.sh` 在服务器构建并重建（镜像 ID 与 staging 相同：
+   `sha256:c980a454e0f0a256f5deac46e4619309595bf9beb86ef24a7226d074a15385bf`）。
+- 部署后内网 80 与公开 `www.ccaiservice.com` 的 `/api/status` 均为
+   `v1.0.0-rc.43-ccai.3`，日志无 `fatal`/`panic`/error；数据核对 users=54、
+   channels=5、tokens=27、top_ups=9、logs=12395、options=71，与部署前一致。
+- 浏览器复验生产 `/`、`/pricing`、`/user-agreement`、`/privacy-policy`：
+   四个页面页脚均显示「© 2026 CCAI Service · Customer support:
+   support@ccaiservice.com · User Agreement · Privacy Policy」，两个法律页正文正常；
+   截图 `.local-run/footer-production.png`（被 Git 忽略）。
 - 本轮改动仅前端，回滚只需把镜像退回 `rc43-ccai.2`，不需要恢复数据库。
 
 #### 升级遗留
 
-- production 已升级到 `rc43-ccai.2`；rc.43 迁移为向前迁移，回滚需先用
-   `prod-rc15-db-20261013-032305.sql.gz` 恢复数据库后再使用 `rc15-ccai.4` 镜像。
+- production 已升级到 `rc43-ccai.3`（在 `rc43-ccai.2` 基础上恢复公共页脚与法律条款
+   入口）；rc.43 迁移为向前迁移，回滚到 `rc15-ccai.4` 需先用
+   `prod-rc15-db-20261013-032305.sql.gz` 恢复数据库；仅回退本次前端改动只需换回
+   `rc43-ccai.2` 镜像。
 - 完整桌面/移动端 UI 回归、模型转发与 Pancake 支付需在 `rc43-ccai.2` 上重新验收，
    production 尚未重跑真实模型调用与支付。
 - 建议在浏览器中用管理员账号人工复验管理端「模型价格」页与 Wallet / pancake 回跳。

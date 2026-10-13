@@ -34,7 +34,8 @@ Frontend:
   upstream `LegalLinks` component — now exported from `footer.tsx` — which links
   the User Agreement and Privacy Policy when those documents are enabled. The
   CCAI home no longer renders its own footer, so both the configured footer
-  content and the legal links stay reachable.
+  content and the legal links stay reachable. Covered by
+  `ui-tests/tests/legal-links.spec.ts`.
 - `web/src/features/profile/` — single-column layout; hides the balance / usage
   / request header, sidebar personal settings, Access Token, non-email
   notification methods (Webhook / Bark / Gotify), upstream model update
