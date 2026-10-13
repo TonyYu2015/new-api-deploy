@@ -262,6 +262,16 @@ staging / production 暂不动。
 - 前端入口包 `index.ca78e05c31.js`，产物内确认包含恢复的 Custom Home Page 分支。
 - `config/production-rollout.md` 的 production 基线与发布登记已更新为
    `rc43-ccai.2`，并记录回滚镜像与备份路径。
+- 支付方式文案修正（PAYMENT-008）：用户反馈生产 `/wallet` 的 Payment Method 只显示
+   「Credit Card (Minimum USD 10)」而看不到 Waffo Pancake。核查确认接口
+   `/api/user/topup/info` 一直返回一个 `waffo_pancake` 条目，只是生产 `PayMethods`
+   将该条目的 `name` 覆盖成了生产专用文案（PAYMENT-003），而后端只在 `PayMethods`
+   没有 `waffo_pancake` 条目时才补默认的「Waffo Pancake」；staging/dev 的 `PayMethods`
+   为空，因此显示默认名。已把生产 `PayMethods` 改回
+   `[{"name":"Waffo Pancake","type":"waffo_pancake","color":"#F97316","min_topup":"10"}]`，
+   改后接口内联生效，最低金额仍为 10；旧值备份在
+   `/opt/new-api-deploy/backups/prod-paymethods-20261013.txt`，未改动任何支付凭据、webhook
+   或下单逻辑。
 
 #### 升级遗留
 

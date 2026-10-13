@@ -60,14 +60,27 @@ disabled.
 | AUTH-001 | Require email verification for registration | Applied | Applied |
 | PAYMENT-001 | Disable Creem checkout | Applied | Applied |
 | PAYMENT-002 | Keep Pancake test and production return URLs environment-specific | Applied | Applied |
-| PAYMENT-003 | Display `Credit Card (Minimum USD 10)` on the production payment method | Not applicable | Applied |
+| PAYMENT-003 | Display `Credit Card (Minimum USD 10)` on the production payment method | Not applicable | Reverted 2026-10-13 (see PAYMENT-008) |
 | PAYMENT-004 | Pass the configured Pancake SuccessURL on every wallet and subscription checkout session | Applied | Applied |
 | PAYMENT-005 | Refresh Wallet balance automatically after returning from Pancake checkout | Applied | Applied |
 | PAYMENT-006 | Continue refreshing Wallet every 2 seconds until the credited balance is observed | Applied | Applied |
+| PAYMENT-008 | Show the production Wallet payment method as `Waffo Pancake` instead of the production-only label `Credit Card (Minimum USD 10)` | Not applicable | Applied 2026-10-13 |
 
 Payment credentials, webhook URLs, API keys, SMTP secrets, and database
 contents must never be copied from staging to production as part of a UI
 rollout.
+
+`PAYMENT-008` reverts the production-only `PayMethods` label set by
+`PAYMENT-003`. The Wallet renders one button per `pay_methods` entry using its
+configured `name`, and `controller/topup.go` only appends the built-in
+`Waffo Pancake` entry when `PayMethods` has no `waffo_pancake` entry of its own.
+Staging and dev keep `PayMethods` empty, so they showed `Waffo Pancake` while
+production showed the customized label. Production now uses
+`[{"name":"Waffo Pancake","type":"waffo_pancake","color":"#F97316","min_topup":"10"}]`,
+which renders identically to staging (default Waffo logo, same minimum). The
+previous value is backed up at
+`/opt/new-api-deploy/backups/prod-paymethods-20261013.txt`; no payment
+credential, webhook, or checkout behaviour changed.
 
 ## Promoted to Production
 
@@ -249,3 +262,4 @@ a rollback must first restore
 | 2026-10-13 | PLATFORM-001 | Staging validated | Rebuilt as `rc43-ccai.2` after restoring the upstream Custom Home Page and navigation behaviour; staging re-verified. |
 | 2026-10-13 | PLATFORM-001 | Applied | Promoted `rc43-ccai.2` to production after a verified database backup; production had been `rc15-ccai.4`. |
 | 2026-10-13 | PAYMENT-007 | Applied | Included in the production `rc43-ccai.2` rollout; a production payment was not re-run on this build. |
+| 2026-10-13 | PAYMENT-003, PAYMENT-008 | Applied | Reverted the production-only payment-method label so production matches staging and dev; previous value backed up under `/opt/new-api-deploy/backups/`. |
