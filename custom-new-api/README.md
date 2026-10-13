@@ -90,7 +90,7 @@ can be re-enabled by dropping the corresponding patch hunks:
 From the repository root:
 
 ```bash
-docker build --file custom-new-api/Dockerfile --tag ccai/new-api:rc43-ccai.1 .
+docker build --file custom-new-api/Dockerfile --tag ccai/new-api:rc43-ccai.2 .
 ```
 
 After staging validation, record the resulting immutable digest in
