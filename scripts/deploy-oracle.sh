@@ -101,7 +101,19 @@ fi
 
 mapfile -t ENV_ARGS < <(env_args "$ENV_FILE")
 
-sudo docker compose "${ENV_ARGS[@]}" pull
+# A CCAI image is built locally from custom-new-api/Dockerfile and is not in
+# any registry, so `docker compose pull` cannot fetch it. Build it and pull only
+# the upstream images, mirroring scripts/deploy-staging.sh.
+new_api_image="$(grep '^NEW_API_IMAGE=' "$ENV_FILE" | cut -d= -f2-)"
+if [[ "$new_api_image" == ccai/new-api:* ]]; then
+  sudo docker build \
+    --file custom-new-api/Dockerfile \
+    --tag "$new_api_image" \
+    .
+  sudo docker compose "${ENV_ARGS[@]}" pull nginx html-filter mysql redis
+else
+  sudo docker compose "${ENV_ARGS[@]}" pull
+fi
 sudo docker compose "${ENV_ARGS[@]}" up -d
 
 # Same stale-DNS hazard as staging: the html-filter nginx caches the
