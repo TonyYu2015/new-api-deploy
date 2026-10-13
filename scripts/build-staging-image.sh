@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="${1:-ccai/new-api:rc43-ccai.2}"
+IMAGE="${1:-ccai/new-api:rc43-ccai.3}"
 
 docker build \
   --network host \

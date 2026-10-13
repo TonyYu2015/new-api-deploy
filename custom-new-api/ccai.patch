@@ -57,6 +57,74 @@ index d097f46..3c233fc 100644
      <meta
        name="description"
        content="Unified AI API gateway and admin dashboard."
+diff --git a/web/src/components/layout/components/footer.tsx b/web/src/components/layout/components/footer.tsx
+index 438fc6c..3447a6c 100644
+--- a/web/src/components/layout/components/footer.tsx
++++ b/web/src/components/layout/components/footer.tsx
+@@ -79,7 +79,8 @@ function FooterLinkItem(props: { link: FooterLink }) {
+ // Renders User Agreement / Privacy Policy links inline with the parent's
+ // copyright row when either is configured in System Settings → Site. Emits
+ // fragmented siblings so the parent flex container's gap controls spacing.
+-function LegalLinks(props: { leadingSeparator?: boolean }) {
++// Exported so the public layout footer reuses the same links.
++export function LegalLinks(props: { leadingSeparator?: boolean }) {
+   const { t } = useTranslation()
+   const { status } = useStatus()
+   const items: { key: string; label: string; href: string }[] = []
+diff --git a/web/src/components/layout/components/public-layout.tsx b/web/src/components/layout/components/public-layout.tsx
+index bcb65db..3ebfcfc 100644
+--- a/web/src/components/layout/components/public-layout.tsx
++++ b/web/src/components/layout/components/public-layout.tsx
+@@ -16,7 +16,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
+ 
+ For commercial licensing, please contact support@quantumnous.com
+ */
++import { useTranslation } from 'react-i18next'
++
++import { useSystemConfig } from '@/hooks/use-system-config'
++
+ import type { TopNavLink } from '../types'
++import { LegalLinks } from './footer'
+ import { PublicHeader, type PublicHeaderProps } from './public-header'
+ 
+ type PublicLayoutProps = {
+@@ -33,6 +38,9 @@ type PublicLayoutProps = {
+ }
+ 
+ export function PublicLayout(props: PublicLayoutProps) {
++  const { t } = useTranslation()
++  const { footerHtml } = useSystemConfig()
++
+   return (
+     <div className='bg-background text-foreground relative min-h-svh overflow-x-clip'>
+       <PublicHeader
+@@ -53,6 +61,26 @@ export function PublicLayout(props: PublicLayoutProps) {
+       ) : (
+         props.children
+       )}
++
++      {/* Every public page (home, pricing, legal documents) keeps the
++          operator-configured footer and the User Agreement / Privacy Policy
++          links, which the CCAI home no longer renders itself. */}
++      <footer className='border-border/40 text-muted-foreground/60 relative z-10 border-t px-6 py-6 text-xs'>
++        <div className='mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-x-3 gap-y-1 text-center sm:flex-row sm:flex-wrap'>
++          {footerHtml ? (
++            <div
++              className='custom-footer min-w-0'
++              dangerouslySetInnerHTML={{ __html: footerHtml }}
++            />
++          ) : (
++            <span>
++              &copy; {new Date().getFullYear()} CCAI Service ·{' '}
++              {t('API Proxy Service')}
++            </span>
++          )}
++          <LegalLinks leadingSeparator />
++        </div>
++      </footer>
+     </div>
+   )
+ }
 diff --git a/web/src/features/home/components/sections/hero.tsx b/web/src/features/home/components/sections/hero.tsx
 index 4a08151..1597e2e 100644
 --- a/web/src/features/home/components/sections/hero.tsx
@@ -283,7 +351,7 @@ index 4a08151..1597e2e 100644
  
          {/* Right Column: Hero Terminal API Demo */}
 diff --git a/web/src/features/home/index.tsx b/web/src/features/home/index.tsx
-index c157d35..1c1614e 100644
+index c157d35..e6e0112 100644
 --- a/web/src/features/home/index.tsx
 +++ b/web/src/features/home/index.tsx
 @@ -20,13 +20,12 @@ import { useCallback, useEffect, useRef } from 'react'
@@ -301,7 +369,7 @@ index c157d35..1c1614e 100644
  import { useHomePageContent } from './hooks'
  
  export function Home() {
-@@ -121,13 +120,15 @@ export function Home() {
+@@ -121,13 +120,12 @@ export function Home() {
    }
  
    return (
@@ -317,9 +385,6 @@ index c157d35..1c1614e 100644
 -      <HowItWorks />
 -      <CTA isAuthenticated={isAuthenticated} />
 -      <Footer />
-+      <footer className='border-border/40 text-muted-foreground/60 relative z-10 border-t px-6 py-6 text-center text-xs'>
-+        &copy; {new Date().getFullYear()} CCAI Service · {t('API Proxy Service')}
-+      </footer>
      </PublicLayout>
    )
  }

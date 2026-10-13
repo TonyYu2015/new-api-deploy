@@ -25,9 +25,16 @@ Frontend:
 - `web/index.html` — document title and meta title become `CCAI Service`.
 - `web/src/features/home/` — the upstream marketing landing
   (`Stats` / `Features` / `HowItWorks` / `CTA` / `Footer`) is replaced by the
-  CCAI hero plus a small CCAI footer. The upstream **Custom Home Page** feature
-  (admin-configured URL / HTML / Markdown, with iframe theme and language sync)
-  is preserved and still takes precedence when content is configured.
+  CCAI hero. The upstream **Custom Home Page** feature (admin-configured URL /
+  HTML / Markdown, with iframe theme and language sync) is preserved and still
+  takes precedence when content is configured.
+- `web/src/components/layout/components/public-layout.tsx` renders one public
+  footer for every public page (home, pricing, legal documents): the
+  operator-configured `footer_html` (System Settings → Site → Footer) plus the
+  upstream `LegalLinks` component — now exported from `footer.tsx` — which links
+  the User Agreement and Privacy Policy when those documents are enabled. The
+  CCAI home no longer renders its own footer, so both the configured footer
+  content and the legal links stay reachable.
 - `web/src/features/profile/` — single-column layout; hides the balance / usage
   / request header, sidebar personal settings, Access Token, non-email
   notification methods (Webhook / Bark / Gotify), upstream model update
@@ -72,6 +79,10 @@ kept while the CCAI product decisions remain:
 - `web/src/components/layout/components/public-header.tsx` is left at the
   upstream implementation, so admin-configured dynamic navigation links keep
   precedence over any page-level `navLinks` prop.
+- The public footer is no longer a CCAI-only replacement. `PublicLayout` owns
+  the footer and reuses the upstream `LegalLinks` (`footer.tsx`), so the
+  admin-configured `footer_html` and the User Agreement / Privacy Policy links
+  stay on every public page instead of being dropped with the upstream `Footer`.
 
 The following removals are intentional CCAI product decisions and were kept.
 Their backend APIs, settings and stored data are untouched, so upstream features
@@ -90,7 +101,7 @@ can be re-enabled by dropping the corresponding patch hunks:
 From the repository root:
 
 ```bash
-docker build --file custom-new-api/Dockerfile --tag ccai/new-api:rc43-ccai.2 .
+docker build --file custom-new-api/Dockerfile --tag ccai/new-api:rc43-ccai.3 .
 ```
 
 After staging validation, record the resulting immutable digest in
