@@ -242,9 +242,31 @@ staging / production 暂不动。
 - 代理层 `html-filter`/`nginx` 由部署脚本按预期强制重建，未再出现 502。
 - `config/production-rollout.md` 的 staging 基线更新为 `rc43-ccai.2`。
 
+#### 生产部署（2026-10-13）
+
+- 对 `rc15-ccai.4` 从 dev 到 staging 的验证已通过，按 `config/production-rollout.md`
+   流程把 production 升级到 `rc43-ccai.2`。
+- 升级前备份 production 数据库：
+   `/opt/new-api-deploy/backups/prod-rc15-db-20261013-032305.sql.gz`
+   （821,761 字节，gzip 校验通过，29 张表）；同时备份 `nginx/conf.d/default.conf`
+   （`prod-html-filter-20261013-032305.conf`）。
+- 服务器代码同步到 `a06985c`，设置 `.env.production` 的 `NEW_API_IMAGE` 为
+   `ccai/new-api:rc43-ccai.2`，由 `deploy-oracle.sh` 在服务器上构建镜像并重建
+   `new-api`；MySQL / Redis 沿用原数据卷，仅重建容器，代理层 `html-filter` /
+   `nginx` 按脚本强制重建以清除缓存的上游地址。
+- 部署后内网 80 与公开 `www.ccaiservice.com` 的 `/api/status` 均为
+   `v1.0.0-rc.43-ccai.2`，首页 HTTP 200；启动日志显示数据库迁移完成、
+   `New API v1.0.0-rc.43-ccai.2 started`，无 `fatal`/`panic`/error。
+- 数据核对：users=54、channels=5、tokens=27、top_ups=9、logs=12383、options=71；
+   `abilities` 路由表 10 个模型；注册、邮箱验证、密码登录开关与升级前一致。
+- 前端入口包 `index.ca78e05c31.js`，产物内确认包含恢复的 Custom Home Page 分支。
+- `config/production-rollout.md` 的 production 基线与发布登记已更新为
+   `rc43-ccai.2`，并记录回滚镜像与备份路径。
+
 #### 升级遗留
 
-- production 仍为 `rc15-ccai.4`，未部署；rc.43 迁移为向前迁移，回滚需先用备份恢复
-   数据库，推广生产前需按 `config/production-rollout.md` 流程执行。
-- 完整桌面/移动端 UI 回归、模型转发与 Pancake 支付需在 `rc43-ccai.2` 上重新验收。
+- production 已升级到 `rc43-ccai.2`；rc.43 迁移为向前迁移，回滚需先用
+   `prod-rc15-db-20261013-032305.sql.gz` 恢复数据库后再使用 `rc15-ccai.4` 镜像。
+- 完整桌面/移动端 UI 回归、模型转发与 Pancake 支付需在 `rc43-ccai.2` 上重新验收，
+   production 尚未重跑真实模型调用与支付。
 - 建议在浏览器中用管理员账号人工复验管理端「模型价格」页与 Wallet / pancake 回跳。
