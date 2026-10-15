@@ -13,3 +13,8 @@ ui-tests/test-results/
 ui-tests/playwright-report/
 ui-tests/.auth/
 ui-tests/.env.e2e
+
+# Deployment-host artefacts: database dumps and pre-change copies of env files
+# or compose files. They stay on the server and must never be committed.
+backups/
+*.before-*
